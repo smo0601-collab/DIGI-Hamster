@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#182038">
+<title>DiGi Hami</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23F2A93B' stroke-width='5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23F2A93B'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#182038;--panel:#222B4A;--panel2:#2A3458;--line:#36416B;
+  --ink:#F3EEE4;--mute:#A3ABC6;--amber:#F2A93B;--amber-ink:#2A1A05;--fur:#EDA35E;
+  --ok:#7FD6A6;--bad:#FF8A7A;--rad:14px;
+  --font:ui-rounded,"SF Pro Rounded","Varela Round","Nunito","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){
+  --bg:#ECEEF6;--panel:#FFFFFF;--panel2:#F4F5FA;--line:#D7DBEA;
+  --ink:#1B2340;--mute:#5D6584;--amber:#C9770F;--amber-ink:#FFFFFF;--fur:#C97A35;color-scheme:light}}
+:root[data-theme=light]{--bg:#ECEEF6;--panel:#FFFFFF;--panel2:#F4F5FA;--line:#D7DBEA;
+  --ink:#1B2340;--mute:#5D6584;--amber:#C9770F;--amber-ink:#FFFFFF;--fur:#C97A35;color-scheme:light}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);
+  padding:0 16px calc(32px + env(safe-area-inset-bottom))}
+main{max-width:760px;margin:0 auto}
+h1,h2,h3{line-height:1.2;margin:0;font-weight:700}
+h2{font-size:1.25rem;margin-bottom:.25rem}
+p{margin:.25rem 0 0}
+.mute{color:var(--mute)}
+.small{font-size:.875rem}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--amber)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+/* ---------- Kopf: Laufrad-Vorschau ---------- */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;padding:28px 0 20px}
+.wheel{--s:min(46vw,212px);width:var(--s);height:var(--s);border-radius:50%;position:relative;flex:none}
+.wheel::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:repeating-conic-gradient(var(--amber) 0 7deg,transparent 7deg 15deg);
+  -webkit-mask:radial-gradient(circle,transparent 63%,#000 63.5%,#000 70%,transparent 70.5%);
+          mask:radial-gradient(circle,transparent 63%,#000 63.5%,#000 70%,transparent 70.5%);
+  animation:spin 24s linear infinite}
+.wheel::after{content:"";position:absolute;inset:0;border-radius:50%;
+  box-shadow:inset 0 0 0 calc(var(--s)*.035) var(--amber),0 10px 40px -12px #000a}
+.wheel .screen{position:absolute;inset:16%;border-radius:50%;overflow:hidden;background:#000}
+.wheel img{width:100%;height:100%;display:block;object-fit:cover}
+.wheel .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:.8rem;color:#9aa;padding:12%}
+.paused .wheel::before{animation-play-state:paused}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.wheel::before{animation:none}}
+.who h1{font-size:clamp(1.9rem,6vw,2.6rem);letter-spacing:-.01em}
+.who .sub{color:var(--mute);margin-top:4px}
+.odo{display:flex;gap:22px;margin:16px 0 14px;flex-wrap:wrap}
+.odo b{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.odo span{color:var(--mute);font-size:.875rem}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:.875rem;color:var(--mute)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute)}
+.dot.on{background:var(--ok)}.dot.ap{background:var(--amber)}.dot.off{background:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+@media (max-width:560px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center;gap:18px}
+  .odo{justify-content:center}.hero .row{justify-content:center}}
+
+/* ---------- Buttons ---------- */
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel2);border-radius:999px;
+  padding:9px 16px;cursor:pointer;line-height:1.2;min-height:40px;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--amber)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--amber-ink);font-weight:700}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.icon{width:18px;height:18px;flex:none}
+
+/* ---------- Navigation ---------- */
+nav{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;margin-bottom:8px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--panel);border-radius:999px;padding:4px;gap:2px}
+.tabs button{border:0;background:none;border-radius:999px;padding:9px 4px;cursor:pointer;color:var(--mute);font-weight:600}
+.tabs button[aria-selected=true]{background:var(--panel2);color:var(--ink);box-shadow:inset 0 -2px 0 var(--amber)}
+
+section[role=tabpanel]{display:none}
+section[role=tabpanel].show{display:block}
+.block{background:var(--panel);border-radius:var(--rad);padding:20px;margin-top:14px}
+.block>p.mute{margin-bottom:14px}
+
+/* ---------- Animationen ---------- */
+.drop{border:2px dashed var(--line);border-radius:var(--rad);padding:22px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--amber);background:var(--panel2)}
+.drop strong{display:block;font-size:1.05rem}
+.opts{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:.9rem}
+.meter{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--fur);width:0;transition:width .3s}
+.jobs{margin-top:10px;display:grid;gap:6px}
+.job{font-size:.9rem;display:flex;justify-content:space-between;gap:10px}
+.job .err{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 14px;margin-top:18px}
+.gif{text-align:center;position:relative}
+.gif .thumb{width:118px;height:118px;margin:0 auto;border-radius:50%;background:#000 center/cover;
+  box-shadow:0 0 0 4px var(--panel2);cursor:pointer;position:relative;border:0;padding:0;display:block}
+.gif.cur .thumb{box-shadow:0 0 0 4px var(--amber)}
+.gif.cur .thumb::after{content:"läuft";position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);
+  background:var(--amber);color:var(--amber-ink);font-size:.72rem;font-weight:700;border-radius:99px;padding:1px 9px}
+.gif.off .thumb{opacity:.45}
+.gif .name{margin-top:14px;font-weight:600;font-size:.92rem;word-break:break-word}
+.gif .meta{font-size:.8rem;color:var(--mute)}
+.gif .acts{display:flex;justify-content:center;gap:4px;margin-top:6px}
+.iconbtn{border:0;background:none;border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;color:var(--mute)}
+.iconbtn:hover{background:var(--panel2);color:var(--ink)}
+.iconbtn.on{color:var(--amber)}
+
+/* ---------- Formulare ---------- */
+.field{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.field:first-of-type{border-top:0}
+.field label,.field .lbl{font-weight:600}
+.field .hint{grid-column:1/-1;color:var(--mute);font-size:.85rem}
+.field.stack{grid-template-columns:1fr}
+input[type=text],input[type=password],input[type=time],input[type=number],select{
+  background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:42px;width:100%}
+input[type=time],input[type=number]{width:auto}
+input[type=range]{width:100%;accent-color:var(--amber);grid-column:1/-1}
+.val{font-variant-numeric:tabular-nums;color:var(--amber);font-weight:700}
+.seg{display:inline-flex;background:var(--panel2);border-radius:999px;padding:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:7px 13px;border-radius:999px;cursor:pointer;color:var(--mute);font-weight:600}
+.seg button[aria-pressed=true]{background:var(--amber);color:var(--amber-ink)}
+.switch{position:relative;width:52px;height:30px;flex:none}
+.switch input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:background .15s;pointer-events:none}
+.switch span::after{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s}
+.switch input:checked+span{background:var(--amber)}
+.switch input:checked+span::after{transform:translateX(22px)}
+.switch input:focus-visible+span{outline:3px solid var(--amber);outline-offset:2px}
+.times{display:flex;gap:10px;align-items:center}
+.nets{display:grid;gap:4px;margin:10px 0}
+.net{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border-radius:10px;cursor:pointer;border:1px solid transparent;text-align:left;width:100%}
+.net:hover,.net.sel{border-color:var(--amber)}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.bars i{width:4px;background:var(--line);border-radius:1px}
+.bars i.on{background:var(--ink)}
+dl.info{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:0;font-size:.92rem}
+dl.info dt{color:var(--mute)}dl.info dd{margin:0;font-variant-numeric:tabular-nums;word-break:break-all}
+
+.toast{visibility:hidden;position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,150%);
+  background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;transition:transform .25s;z-index:20;max-width:calc(100vw - 32px)}
+.toast.show{visibility:visible;transform:translate(-50%,0)}
+.toast.err{background:var(--bad);color:#2a0b07}
+.hide{display:none!important}
+@media (max-width:480px){
+  .tabs button{font-size:.8rem;padding:9px 2px}
+  .field{grid-template-columns:1fr}
+  .field .val{justify-self:start}
+  .times input{flex:1;min-width:0}
+  .block{padding:16px}
+}
+footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path fill="currentColor" d="M5 6.2v11.6a1 1 0 0 0 1.55.83L15 13v4.5a1 1 0 0 0 2 0v-11a1 1 0 0 0-2 0V11L6.55 5.37A1 1 0 0 0 5 6.2Z"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 6h11M4 12h11M4 18h7M17 16l2 2 4-4"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 11V6.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5.5m0-3a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-.5a7 7 0 0 1-5.6-2.8L3.6 15.4a1.6 1.6 0 0 1 2.4-2.1L7 14.5V11"/></symbol>
+</svg>
+<main>
+  <header class="hero" id="hero">
+    <div class="wheel" aria-label="Was gerade auf dem Display läuft">
+      <div class="screen"><img id="live" alt=""><div class="empty hide" id="liveEmpty">Display aus</div></div>
+    </div>
+    <div class="who">
+      <h1 id="hamName">Hami</h1>
+      <div class="status"><i class="dot" id="netDot"></i><span id="netText">Verbinde …</span></div>
+      <div class="odo">
+        <div><b id="odoToday">–</b><span>heute gelaufen</span></div>
+        <div><b id="odoTotal">–</b><span>insgesamt</span></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="btnNext"><svg class="icon"><use href="#i-next"/></svg>Nächste Animation</button>
+        <button class="btn" id="btnIdentify" title="Zeigt kurz Name und IP auf dem Display"><svg class="icon"><use href="#i-wave"/></svg>Winken</button>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" aria-controls="t-gifs" id="tab-gifs">Animationen</button>
+      <button role="tab" aria-selected="false" aria-controls="t-play" id="tab-play">Wiedergabe</button>
+      <button role="tab" aria-selected="false" aria-controls="t-night" id="tab-night">Nachtruhe</button>
+      <button role="tab" aria-selected="false" aria-controls="t-sys" id="tab-sys">System</button>
+    </div>
+  </nav>
+
+  <!-- ===================== Animationen ===================== -->
+  <section role="tabpanel" id="t-gifs" class="show" aria-labelledby="tab-gifs">
+    <div class="block">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Dateien zum Hochladen auswählen">
+        <strong>GIF, Bild oder Video hierher ziehen</strong>
+        <span class="mute small">oder tippen zum Auswählen. Alles wird automatisch auf 240 × 240 umgerechnet – so wird auch das Handyvideo von deinem echten Hamster zur Animation.</span>
+        <input type="file" id="file" accept="image/gif,image/png,image/jpeg,image/webp,video/*" multiple hidden>
+      </div>
+      <div class="opts">
+        <label><input type="radio" name="fit" value="cover" checked> Kreis füllen</label>
+        <label><input type="radio" name="fit" value="contain"> Ganz zeigen</label>
+        <label><input type="checkbox" id="playAfter" checked> Danach abspielen</label>
+        <span>Videos: ab <input type="number" id="vStart" value="0" min="0" step="0.5" style="width:70px;min-height:32px;padding:4px 8px"> s,
+          Länge <input type="number" id="vLen" value="3" min="1" max="10" step="0.5" style="width:70px;min-height:32px;padding:4px 8px"> s</span>
+      </div>
+      <div class="jobs" id="jobs"></div>
+      <div style="margin-top:16px">
+        <div class="row small" style="justify-content:space-between"><span>Speicher</span><span class="mute num" id="fsText">–</span></div>
+        <div class="meter"><i id="fsBar"></i></div>
+      </div>
+    </div>
+    <div class="grid" id="grid" aria-live="polite"></div>
+    <p class="mute small" style="margin-top:22px">Tippe auf ein Bild, um es sofort abzuspielen. Die Häkchen-Taste nimmt eine Animation in die Playlist auf oder heraus.</p>
+  </section>
+
+  <!-- ===================== Wiedergabe ===================== -->
+  <section role="tabpanel" id="t-play" aria-labelledby="tab-play">
+    <div class="block">
+      <div class="field">
+        <span class="lbl">Ablauf</span>
+        <div class="seg" id="mode" role="group" aria-label="Ablauf">
+          <button data-v="0">Nur eine</button><button data-v="1">Der Reihe nach</button><button data-v="2">Zufällig</button>
+        </div>
+        <span class="hint" id="modeHint"></span>
+      </div>
+      <div class="field" id="intervalField">
+        <label for="interval">Wechsel alle</label>
+        <span><input type="number" id="interval" min="1" max="1440" style="width:90px"> Min.</span>
+        <span class="hint">Gewechselt wird immer am Ende eines Durchlaufs.</span>
+      </div>
+      <div class="field">
+        <label for="speed">Tempo</label><span class="val" id="speedVal"></span>
+        <input type="range" id="speed" min="25" max="300" step="5">
+      </div>
+      <div class="field">
+        <label for="brightness">Helligkeit</label><span class="val" id="brightnessVal"></span>
+        <input type="range" id="brightness" min="5" max="100" step="5">
+        <span class="hint" id="blHint"></span>
+      </div>
+      <div class="field">
+        <span class="lbl">Drehung</span>
+        <div class="seg" id="rotation" role="group" aria-label="Drehung">
+          <button data-v="0">0°</button><button data-v="1">90°</button><button data-v="2">180°</button><button data-v="3">270°</button>
+        </div>
+        <span class="hint">Falls das Display schief im Rad sitzt.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Nachtruhe ===================== -->
+  <section role="tabpanel" id="t-night" aria-labelledby="tab-night">
+    <div class="block">
+      <div class="field">
+        <label for="nightOn">Nachtruhe</label>
+        <label class="switch"><input type="checkbox" id="nightOn"><span></span></label>
+        <span class="hint" id="nightHint">Zur eingestellten Zeit schläft dein Hamster – oder das Display geht aus.</span>
+      </div>
+      <div class="field">
+        <span class="lbl">Zeitraum</span>
+        <div class="times"><input type="time" id="nightStart" aria-label="Beginn"> bis <input type="time" id="nightEnd" aria-label="Ende"></div>
+      </div>
+      <div class="field">
+        <span class="lbl">Nachts</span>
+        <div class="seg" id="nightAction" role="group" aria-label="Was nachts passiert">
+          <button data-v="2">Schlafen</button><button data-v="1">Dimmen</button><button data-v="0">Display aus</button>
+        </div>
+      </div>
+      <div class="field" id="nightGifField">
+        <label for="nightGif">Schlaf-Animation</label>
+        <select id="nightGif" style="width:auto;max-width:60vw"></select>
+      </div>
+      <div class="field" id="nightDimField">
+        <label for="nightDim">Helligkeit nachts</label><span class="val" id="nightDimVal"></span>
+        <input type="range" id="nightDim" min="5" max="100" step="5">
+      </div>
+      <div class="field">
+        <label for="tz">Zeitzone</label>
+        <select id="tz" style="width:auto;max-width:60vw">
+          <option value="CET-1CEST,M3.5.0,M10.5.0/3">Deutschland, Österreich, Schweiz</option>
+          <option value="GMT0BST,M3.5.0/1,M10.5.0">Großbritannien, Irland</option>
+          <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Osteuropa (EET)</option>
+          <option value="WET0WEST,M3.5.0/1,M10.5.0">Portugal (WET)</option>
+          <option value="EST5EDT,M3.2.0,M11.1.0">USA Ost</option>
+          <option value="CST6CDT,M3.2.0,M11.1.0">USA Mitte</option>
+          <option value="PST8PDT,M3.2.0,M11.1.0">USA West</option>
+          <option value="UTC0">UTC</option>
+        </select>
+        <span class="hint" id="clock"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== System ===================== -->
+  <section role="tabpanel" id="t-sys" aria-labelledby="tab-sys">
+    <div class="block">
+      <h2>Dein Hamster</h2>
+      <div class="field stack">
+        <label for="name">Name</label>
+        <input type="text" id="name" maxlength="24" autocomplete="off">
+      </div>
+      <div class="field stack">
+        <label for="hostname">Adresse im Netzwerk</label>
+        <div class="row"><span class="mute">http://</span><input type="text" id="hostname" maxlength="31" style="flex:1;min-width:120px" autocomplete="off"><span class="mute">.local</span></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="saveName">Namen speichern</button></div>
+    </div>
+
+    <div class="block">
+      <h2>WLAN</h2>
+      <p class="mute" id="wifiState">–</p>
+      <div class="row" style="margin-top:12px"><button class="btn" id="scan">Netzwerke suchen</button></div>
+      <div class="nets" id="nets"></div>
+      <div class="field stack">
+        <label for="ssid">Netzwerkname (SSID)</label>
+        <input type="text" id="ssid" maxlength="32" autocomplete="off">
+      </div>
+      <div class="field stack">
+        <label for="pass">Passwort</label>
+        <input type="password" id="pass" maxlength="64" autocomplete="new-password" placeholder="leer lassen = unverändert">
+      </div>
+      <div class="row"><button class="btn primary" id="saveWifi">Verbinden und neu starten</button></div>
+      <div class="field" style="margin-top:14px">
+        <label for="txPower">Sendeleistung</label>
+        <select id="txPower" style="width:auto">
+          <option value="0">Standard (8,5 dBm)</option><option value="44">11 dBm</option><option value="52">13 dBm</option>
+          <option value="60">15 dBm</option><option value="68">17 dBm</option><option value="78">19,5 dBm (maximal)</option>
+        </select>
+        <span class="hint">Lädt die Seite langsam oder ist das Signal schwach (unter ca. −70 dBm), probier eine höhere Stufe. Bricht die Verbindung dann ab, wieder zurück auf Standard – manche C3-Super-Mini-Platinen vertragen nur wenig Leistung.</span>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>Firmware-Update</h2>
+      <p class="mute hide" id="noOta">Dieses Gerät wurde mit einem Partitionsschema ohne OTA geflasht (z. B. „No OTA“ in der Arduino IDE). Neue Firmware bitte per USB aufspielen – deine Animationen bleiben dabei erhalten.</p>
+      <div id="otaBox">
+      <p class="mute">Wähle die Firmware-Datei: bei PlatformIO <code>firmware.bin</code> aus <code>.pio/build/esp32-c3-supermini/</code>, bei der Arduino IDE <code>DiGi_Hami.ino.bin</code> (Sketch → Kompilierte Binärdatei exportieren). Deine Animationen bleiben erhalten.</p>
+      <div class="row" style="margin-top:12px">
+        <input type="file" id="fw" accept=".bin" hidden>
+        <button class="btn" id="fwBtn">Firmware auswählen</button>
+        <span class="mute small" id="fwText"></span>
+      </div>
+      <div class="meter hide" id="fwMeter"><i id="fwBar"></i></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>Gerät</h2>
+      <dl class="info" id="info"></dl>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" id="reboot">Neu starten</button>
+        <button class="btn danger" id="factory">Auf Werkseinstellungen zurücksetzen</button>
+        <button class="btn" id="theme" title="Hell/Dunkel umschalten">Hell / Dunkel</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>DiGi Hami <span id="ver"></span></footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let S={}, ST={}, FILES=[], FS={total:0,used:0};
+
+/* ---------------- Hilfen ---------------- */
+function toast(msg,err){const t=$("#toast");t.textContent=msg;t.className="toast show"+(err?" err":"");clearTimeout(t._h);t._h=setTimeout(()=>t.className="toast",err?5000:2600)}
+async function api(path,opt={}){
+  const o={method:opt.body!==undefined||opt.post?"POST":"GET",headers:{}};
+  if(opt.body!==undefined){o.body=JSON.stringify(opt.body);o.headers["Content-Type"]="application/json"}
+  const r=await fetch(path,o);let j={};try{j=await r.json()}catch(e){}
+  if(!r.ok||j.ok===false)throw new Error(j.error||("HTTP "+r.status));return j}
+const kb=b=>b<1024*1024?(b/1024).toFixed(0)+" KB":(b/1048576).toFixed(2).replace(".",",")+" MB";
+function km(m){if(m==null)return"–";return m<1000?Math.round(m)+" m":(m/1000).toLocaleString("de-DE",{maximumFractionDigits:m<100000?2:0})+" km"}
+const hm=v=>String(Math.floor(v/60)).padStart(2,"0")+":"+String(v%60).padStart(2,"0");
+const mins=s=>{const[a,b]=s.split(":").map(Number);return a*60+b};
+const enc=encodeURIComponent;
+function debounce(fn,ms){let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>fn(...a),ms)}}
+const NICE={hami_rennt:"Hami rennt",hami_sprint:"Hami sprintet",hami_schlaeft:"Hami schläft",hami_snack:"Hami snackt",hami_hallo:"Hami sagt Hallo",hami_ueberschlag:"Hami überschlägt sich",schneeflocke_rennt:"Schneeflocke rennt",schoko_rennt:"Schoko rennt",echter_hamster:"Echter Hamster",hami_putzt:"Hami putzt sich",hami_gaehnt:"Hami gähnt",hami_kaffee:"Kaffeepause",hami_hantel:"Hami trainiert",hami_halloween:"Halloween-Hami",hami_weihnachten:"Weihnachts-Hami",echter_hamster_fluessig:"Echter Hamster (flüssig)"};
+function prettyName(n){const b=n.replace(/\.gif$/i,"");return NICE[b]||b.replace(/[_-]+/g," ").replace(/^\w/,c=>c.toUpperCase())}
+
+/* ---------------- Tabs ---------------- */
+$$('[role=tab]').forEach(b=>b.addEventListener("click",()=>{
+  $$('[role=tab]').forEach(x=>x.setAttribute("aria-selected",x===b));
+  $$('[role=tabpanel]').forEach(p=>p.classList.toggle("show",p.id===b.getAttribute("aria-controls")));
+  if(b.id==="tab-sys")renderInfo();
+}));
+
+/* ---------------- Status ---------------- */
+let liveName=null;
+async function loadStatus(){
+  try{ST=await api("/api/status")}catch(e){$("#netDot").className="dot off";$("#netText").textContent="Keine Verbindung zum Hamster";return}
+  $("#hamName").textContent=ST.name;document.title=ST.name+" · DiGi Hami";
+  $("#ver").textContent="v"+ST.version;
+  const d=$("#netDot"),t=$("#netText");
+  if(ST.mode==="sta"){d.className="dot on";t.textContent="Online · "+ST.ip+" · "+ST.hostname+".local"}
+  else if(ST.mode==="ap"){d.className="dot ap";t.textContent="Einrichtungsmodus · WLAN „"+ST.apName+"“"}
+  else{d.className="dot";t.textContent="Verbinde mit WLAN …"}
+  $("#odoToday").textContent=km(ST.odoToday);$("#odoTotal").textContent=km(ST.odoTotal);
+  FS={total:ST.fsTotal,used:ST.fsUsed};renderFs();
+  const cur=ST.current||"";
+  if(cur!==liveName){liveName=cur;
+    if(cur){$("#live").src="/gifs/"+enc(cur)+"?v="+(sizeOf(cur)||"");$("#live").alt="Läuft gerade: "+prettyName(cur);$("#live").classList.remove("hide");$("#liveEmpty").classList.add("hide")}
+    else{$("#live").removeAttribute("src");$("#live").classList.add("hide");$("#liveEmpty").classList.remove("hide");$("#liveEmpty").textContent=ST.night?"Nachtruhe – Display aus":"Keine Animation"}
+    $$(".gif").forEach(g=>g.classList.toggle("cur",g.dataset.name===cur));
+  }
+  document.body.classList.toggle("paused",!cur);
+  if(ST.timeValid)$("#clock").textContent="Uhrzeit auf dem Gerät: "+ST.time+(ST.night?" · Nachtruhe aktiv":"");
+  else $("#clock").textContent=ST.mode==="sta"?"Uhrzeit wird geholt …":"Ohne WLAN-Verbindung kennt der Hamster die Uhrzeit nicht – Nachtruhe braucht Internet.";
+  const ota=ST.sketchFree>=ST.sketch;$("#otaBox").classList.toggle("hide",!ota);$("#noOta").classList.toggle("hide",ota);
+  if($("#t-sys").classList.contains("show"))renderInfo();
+  renderWifiState();
+}
+const sizeOf=n=>(FILES.find(f=>f.name===n)||{}).size;
+function renderFs(){if(!FS.total)return;const p=FS.used/FS.total*100;$("#fsBar").style.width=p.toFixed(1)+"%";
+  $("#fsText").textContent=kb(FS.total-FS.used)+" frei von "+kb(FS.total)}
+
+/* ---------------- Dateien ---------------- */
+// Vorschaubilder: erst laden, wenn sie sichtbar werden, und nacheinander -
+// der ESP32 bedient nur eine Verbindung gleichzeitig. Der Browser cached sie
+// dauerhaft (URL enthaelt ?v=Groesse), ab dem zweiten Aufruf kommen sie sofort.
+const thumbQ=[];let thumbBusy=false;
+const thumbIO="IntersectionObserver" in window?new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){thumbIO.unobserve(e.target);thumbQ.push([e.target,e.target.dataset.src]);pumpThumbs()}},{rootMargin:"100px"}):null;
+function queueThumb(el,url){el.dataset.src=url;if(thumbIO)thumbIO.observe(el);else{thumbQ.push([el,url]);pumpThumbs()}}
+function pumpThumbs(){ // nacheinander laden, der ESP32 bedient nur eine Verbindung
+  if(thumbBusy||!thumbQ.length)return;thumbBusy=true;const[el,url]=thumbQ.shift();
+  const im=new Image();im.onload=im.onerror=()=>{el.style.backgroundImage="url('"+url+"')";thumbBusy=false;pumpThumbs()};im.src=url}
+async function loadFiles(){
+  try{const j=await api("/api/files");FILES=j.files;FS={total:j.fsTotal,used:j.fsUsed};renderFs();renderFiles(j.current)}
+  catch(e){toast("Dateiliste nicht geladen: "+e.message,1)}
+}
+function renderFiles(cur){
+  const g=$("#grid");g.innerHTML="";
+  if(!FILES.length){g.innerHTML='<p class="mute">Noch keine Animationen. Lade oben ein GIF hoch.</p>'}
+  for(const f of FILES){
+    const d=document.createElement("div");d.className="gif"+(f.name===cur?" cur":"")+(f.playlist?"":" off");d.dataset.name=f.name;
+    d.innerHTML=`<button class="thumb" title="Jetzt abspielen" aria-label="${prettyName(f.name)} abspielen"></button>
+      <div class="name">${prettyName(f.name)}</div><div class="meta">${kb(f.size)}${f.playlist?"":" · nicht in Playlist"}</div>
+      <div class="acts">
+        <button class="iconbtn ${f.playlist?"on":""}" data-a="pl" title="${f.playlist?"Aus Playlist nehmen":"In Playlist aufnehmen"}" aria-pressed="${f.playlist}"><svg class="icon"><use href="#i-list"/></svg></button>
+        <button class="iconbtn" data-a="play" title="Abspielen"><svg class="icon"><use href="#i-play"/></svg></button>
+        <button class="iconbtn" data-a="del" title="Löschen"><svg class="icon"><use href="#i-del"/></svg></button>
+      </div>`;
+    queueThumb(d.querySelector(".thumb"),"/gifs/"+enc(f.name)+"?v="+f.size);
+    d.querySelector(".thumb").onclick=()=>play(f.name);
+    d.querySelector('[data-a=play]').onclick=()=>play(f.name);
+    d.querySelector('[data-a=del]').onclick=()=>del(f.name);
+    d.querySelector('[data-a=pl]').onclick=()=>togglePl(f);
+    g.appendChild(d);
+  }
+  fillNightGifs();
+}
+async function play(n){try{await api("/api/play?name="+enc(n),{post:1});liveName=null;await loadStatus();toast(prettyName(n)+" läuft")}catch(e){toast(e.message,1)}}
+async function del(n){if(!confirm(`„${prettyName(n)}“ löschen?`))return;
+  try{await api("/api/delete?name="+enc(n),{post:1});toast("Gelöscht");await loadFiles();liveName=null;loadStatus()}catch(e){toast(e.message,1)}}
+async function togglePl(f){
+  const skip=new Set(S.skip||[]);f.playlist?skip.add(f.name):skip.delete(f.name);
+  try{S=await api("/api/settings",{body:{skip:[...skip]}});f.playlist=!f.playlist;renderFiles(liveName)}catch(e){toast(e.message,1)}}
+$("#btnNext").onclick=async()=>{try{await api("/api/next",{post:1});liveName=null;setTimeout(loadStatus,300)}catch(e){toast(e.message,1)}};
+$("#btnIdentify").onclick=async()=>{try{await api("/api/identify",{post:1});toast("Schau aufs Display 👋")}catch(e){toast(e.message,1)}};
+
+/* ---------------- Upload + Umrechnung ---------------- */
+const drop=$("#drop"),fileIn=$("#file");
+drop.onclick=()=>fileIn.click();drop.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fileIn.click()}};
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>handleFiles([...e.dataTransfer.files]));
+fileIn.onchange=()=>{handleFiles([...fileIn.files]);fileIn.value=""};
+
+async function handleFiles(list){
+  for(const f of list){
+    const job=document.createElement("div");job.className="job";job.innerHTML=`<span>${f.name}</span><span class="st mute">prüfe …</span>`;
+    $("#jobs").appendChild(job);const st=job.querySelector(".st");
+    try{
+      let blob=f,name=f.name.replace(/\.[^.]+$/,"")+".gif";
+      const free=FS.total?FS.total-FS.used-8192:1e9;
+      if(/^video\//.test(f.type)||/\.(mp4|mov|webm|m4v)$/i.test(f.name)){
+        st.textContent="lese Video …";
+        const clip=await grabVideo(f,$('input[name=fit]:checked').value,+$("#vStart").value||0,Math.min(10,+$("#vLen").value||4),
+          p=>st.textContent="lese Video … "+Math.round(p*100)+" %");
+        // schrittweise sparsamer kodieren, bis es in den freien Speicher passt
+        const tries=[{fps:12,thr:300,colors:255},{fps:12,thr:800,colors:192},{fps:8,thr:800,colors:160},{fps:8,thr:1500,colors:128},{fps:6,thr:1500,colors:96}];
+        for(const t of tries){
+          const fr=[];for(let k=0;;k++){const i=Math.round(k*12/t.fps);if(i>=clip.frames.length)break;fr.push(clip.frames[i])}
+          const de=fr.map(()=>1000/t.fps);
+          st.textContent="komprimiere …";await new Promise(r=>setTimeout(r));
+          blob=encodeGif(fr,de,240,240,p=>st.textContent="komprimiere … "+Math.round(p*100)+" %",{thr:t.thr,colors:t.colors});
+          if(blob.size<=Math.min(free,600*1024))break;
+        }
+        if(blob.size>free)throw new Error(`zu groß (${kb(blob.size)}, frei: ${kb(Math.max(0,free))}) – kürzeren Ausschnitt wählen oder Animationen löschen`);
+        await upload(blob,name,p=>st.textContent="lade hoch … "+Math.round(p*100)+" %");
+        st.textContent="fertig ("+kb(blob.size)+")";st.className="st";setTimeout(()=>job.remove(),5000);
+        continue;
+      }
+      const g=gifInfo(new Uint8Array(await f.arrayBuffer()));
+      const fits=g&&g.w<=240&&g.h<=240;
+      if(!fits||g.local){
+        st.textContent="rechne um …";
+        try{blob=await convertToGif(f,$('input[name=fit]:checked').value,p=>st.textContent="rechne um … "+Math.round(p*100)+" %")}
+        catch(e){if(!fits)throw e} // passt schon -> Original hochladen, das Geraet kann es auch so
+      }
+      if(FS.total&&blob.size>free)throw new Error(`zu groß (${kb(blob.size)}, frei: ${kb(Math.max(0,free))})`);
+      await upload(blob,name,p=>st.textContent="lade hoch … "+Math.round(p*100)+" %");
+      st.textContent="fertig ("+kb(blob.size)+")";st.className="st";
+      setTimeout(()=>job.remove(),5000);
+    }catch(e){st.textContent=e.message;st.className="st err"}
+  }
+  await loadFiles();liveName=null;loadStatus();
+}
+function upload(blob,name,prog){return new Promise((res,rej)=>{
+  const fd=new FormData();fd.append("file",blob,name);
+  const x=new XMLHttpRequest();x.open("POST","/api/upload?name="+enc(name)+($("#playAfter").checked?"&play=1":""));
+  x.upload.onprogress=e=>e.lengthComputable&&prog(e.loaded/e.total);
+  x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(e){}x.status===200&&j.ok?res(j):rej(new Error(j.error||"Upload fehlgeschlagen ("+x.status+")"))};
+  x.onerror=()=>rej(new Error("Verbindung abgebrochen"));x.send(fd)})}
+
+/* GIF-Kopf lesen: Groesse + ob Frames eigene Farbpaletten haben */
+function gifInfo(b){
+  if(b.length<13||b[0]!==71||b[1]!==73||b[2]!==70)return null;
+  const r={w:b[6]|b[7]<<8,h:b[8]|b[9]<<8,local:false};let p=13;
+  if(b[10]&0x80)p+=3*(1<<((b[10]&7)+1));
+  const skip=()=>{while(p<b.length){const n=b[p++];if(!n)return;p+=n}};
+  while(p<b.length){const t=b[p++];
+    if(t===0x21){p++;skip()}
+    else if(t===0x2C){if(b[p+8]&0x80){r.local=true;break}p+=10;skip()}
+    else break}
+  return r}
+/* Video -> Einzelbilder (12 fps) */
+async function grabVideo(file,fit,start,len,prog){
+  const SIZE=240,FPS=12,cv=document.createElement("canvas");cv.width=cv.height=SIZE;
+  const ctx=cv.getContext("2d",{willReadFrequently:true});
+  const url=URL.createObjectURL(file),v=document.createElement("video");
+  v.muted=true;v.playsInline=true;v.preload="auto";v.src=url;
+  try{
+    await new Promise((res,rej)=>{v.onloadeddata=res;v.onerror=()=>rej(new Error("Dieses Videoformat kann der Browser nicht lesen (MP4/H.264 oder WebM verwenden)"))});
+    const dur=v.duration||0;start=Math.max(0,Math.min(start,dur-0.3));const end=Math.min(dur,start+len);
+    const frames=[];
+    for(let t=start;t<end-1e-3;t+=1/FPS){
+      await new Promise(res=>{const h=setTimeout(res,3000);v.onseeked=()=>{clearTimeout(h);res()};v.currentTime=t});
+      ctx.fillStyle="#000";ctx.fillRect(0,0,SIZE,SIZE);
+      const sw=v.videoWidth,sh=v.videoHeight,sc=fit==="cover"?Math.max(SIZE/sw,SIZE/sh):Math.min(SIZE/sw,SIZE/sh);
+      ctx.imageSmoothingQuality="high";ctx.drawImage(v,(SIZE-sw*sc)/2,(SIZE-sh*sc)/2,sw*sc,sh*sc);
+      frames.push(ctx.getImageData(0,0,SIZE,SIZE).data);prog((t-start)/(end-start));
+    }
+    if(!frames.length)throw new Error("Video ist leer oder der Startpunkt liegt hinter dem Ende");
+    return{frames,delay:1000/FPS};
+  }finally{URL.revokeObjectURL(url)}
+}
+/* Bild/Animation -> 240x240-GIF (im Browser) */
+async function convertToGif(file,fit,prog){
+  const SIZE=240,cv=document.createElement("canvas");cv.width=cv.height=SIZE;
+  const ctx=cv.getContext("2d",{willReadFrequently:true});
+  const frames=[],delays=[];
+  const draw=(src,sw,sh)=>{ctx.fillStyle="#000";ctx.fillRect(0,0,SIZE,SIZE);
+    const sc=fit==="cover"?Math.max(SIZE/sw,SIZE/sh):Math.min(SIZE/sw,SIZE/sh);
+    const w=sw*sc,h=sh*sc;ctx.imageSmoothingQuality="high";ctx.drawImage(src,(SIZE-w)/2,(SIZE-h)/2,w,h);
+    return ctx.getImageData(0,0,SIZE,SIZE).data};
+  if("ImageDecoder" in window){
+    const dec=new ImageDecoder({data:await file.arrayBuffer(),type:file.type||"image/gif"});
+    await dec.tracks.ready;const n=dec.tracks.selectedTrack.frameCount||1;
+    const step=Math.max(1,Math.ceil(n/90)); // max. ~90 Frames
+    for(let i=0;i<n;i+=step){
+      const{image}=await dec.decode({frameIndex:i});
+      let ms=(image.duration||100000)/1000*step;
+      frames.push(draw(image,image.displayWidth,image.displayHeight));delays.push(ms);image.close();prog(i/n*.5);
+    }
+    dec.close();
+  }else{
+    if(/gif/.test(file.type))throw new Error("Dieser Browser kann animierte GIFs nicht umrechnen – bitte Chrome oder Edge nutzen, oder das GIF vorher auf 240×240 verkleinern.");
+    const bmp=await createImageBitmap(file);frames.push(draw(bmp,bmp.width,bmp.height));delays.push(1000);
+  }
+  await new Promise(r=>setTimeout(r));
+  return encodeGif(frames,delays,SIZE,SIZE,p=>prog(.5+p*.5));
+}
+
+/* --- Median-Cut-Palette (255 Farben + 1 transparent) --- */
+function buildPalette(frames,n){
+  const hist=new Uint32Array(32768);
+  for(const f of frames)for(let i=0;i<f.length;i+=4*3)hist[(f[i]>>3)<<10|(f[i+1]>>3)<<5|f[i+2]>>3]++;
+  const cols=[];for(let k=0;k<32768;k++)if(hist[k])cols.push(k);
+  let boxes=[cols];
+  const ch=(k,c)=>c===0?k>>10:c===1?(k>>5)&31:k&31;
+  while(boxes.length<n){
+    let bi=-1,best=-1,bc=0;
+    boxes.forEach((b,i)=>{if(b.length<2)return;for(let c=0;c<3;c++){let lo=31,hi=0,cnt=0;for(const k of b){const v=ch(k,c);if(v<lo)lo=v;if(v>hi)hi=v;cnt+=hist[k]}
+      const sc=(hi-lo)*Math.sqrt(cnt);if(sc>best){best=sc;bi=i;bc=c}}});
+    if(bi<0||best<=0)break;
+    const b=boxes[bi].sort((a,b)=>ch(a,bc)-ch(b,bc));let tot=0;for(const k of b)tot+=hist[k];
+    let acc=0,cut=0;for(;cut<b.length-1;cut++){acc+=hist[b[cut]];if(acc>=tot/2)break}
+    boxes.splice(bi,1,b.slice(0,cut+1),b.slice(cut+1));
+  }
+  return boxes.map(b=>{let r=0,g=0,bl=0,t=0;for(const k of b){const w=hist[k];r+=(k>>10)*w;g+=((k>>5)&31)*w;bl+=(k&31)*w;t+=w}
+    return[Math.round(r/t*8.226),Math.round(g/t*8.226),Math.round(bl/t*8.226)]});
+}
+function encodeGif(frames,delays,W,H,prog,opt={}){
+  const T=255,NC=Math.min(255,opt.colors||255),thr=opt.thr||0;
+  const pal=buildPalette(frames,NC-1);pal.push([0,0,0]);const black=pal.length-1; // echtes Schwarz reservieren
+  while(pal.length<255)pal.push([0,0,0]);
+  const cache=new Int16Array(32768).fill(-1);
+  const near=k=>{let c=cache[k];if(c>=0)return c;const r=(k>>10)*8.226,g=((k>>5)&31)*8.226,b=(k&31)*8.226;let bd=1e9;
+    for(let i=0;i<NC;i++){const p=pal[i],d=(p[0]-r)**2*2+(p[1]-g)**2*4+(p[2]-b)**2*3;if(d<bd){bd=d;c=i}}return cache[k]=c};
+  const out=new ByteOut();const N=W*H;
+  out.str("GIF89a");out.u16(W);out.u16(H);out.byte(0xF7);out.byte(0);out.byte(0);
+  for(let i=0;i<256;i++){const p=pal[i]||[0,0,0];out.byte(p[0]);out.byte(p[1]);out.byte(p[2])}
+  if(frames.length>1){out.bytes([0x21,0xFF,0x0B]);out.str("NETSCAPE2.0");out.bytes([3,1,0,0,0])}
+  // Pixel ausserhalb des runden Displays sind unsichtbar -> immer schwarz
+  const R2=(W/2+1)**2,outside=new Uint8Array(N);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)outside[y*W+x]=((x-W/2+.5)**2+(y-H/2+.5)**2)>R2?1:0;
+  const pd=(a,b)=>{const p=pal[a],q=pal[b];return(p[0]-q[0])**2*2+(p[1]-q[1])**2*4+(p[2]-q[2])**2*3};
+  let prev=null;const pend=[];
+  for(let f=0;f<frames.length;f++){
+    const px=frames[f],idx=new Uint8Array(N);
+    for(let i=0,j=0;i<N;i++,j+=4)idx[i]=outside[i]?black:near((px[j]>>3)<<10|(px[j+1]>>3)<<5|px[j+2]>>3);
+    // verlustbehaftet (Videos): kaum veraenderte Pixel vom Vorbild uebernehmen -> viel kleiner
+    if(prev&&thr)for(let i=0;i<N;i++)if(idx[i]!==prev[i]&&pd(idx[i],prev[i])<thr)idx[i]=prev[i];
+    let x0=0,y0=0,x1=W-1,y1=H-1,img=idx;
+    if(prev){x0=W;y0=H;x1=-1;y1=-1;
+      for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(idx[i]!==prev[i]){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}
+      if(x1<0){pend[pend.length-1].d+=delays[f];continue} // keine Aenderung -> Dauer anhaengen
+      const w=x1-x0+1,h=y1-y0+1;img=new Uint8Array(w*h);
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y+y0)*W+x+x0;img[y*w+x]=idx[i]===prev[i]?T:idx[i]}
+    }
+    pend.push({x0,y0,w:x1-x0+1,h:y1-y0+1,img,d:delays[f],tr:!!prev});prev=idx;prog(f/frames.length);
+  }
+  for(const p of pend){
+    const cs=Math.max(2,Math.round(p.d/10));
+    out.bytes([0x21,0xF9,4,(1<<2)|(p.tr?1:0),cs&255,cs>>8,T,0]);
+    out.byte(0x2C);out.u16(p.x0);out.u16(p.y0);out.u16(p.w);out.u16(p.h);out.byte(0);
+    lzw(out,8,p.img);
+  }
+  out.byte(0x3B);return new Blob([out.buf.subarray(0,out.n)],{type:"image/gif"});
+}
+class ByteOut{constructor(){this.buf=new Uint8Array(1<<16);this.n=0}
+  byte(b){if(this.n>=this.buf.length){const nb=new Uint8Array(this.buf.length*2);nb.set(this.buf);this.buf=nb}this.buf[this.n++]=b}
+  bytes(a){for(const b of a)this.byte(b)}u16(v){this.byte(v&255);this.byte(v>>8&255)}str(s){for(const c of s)this.byte(c.charCodeAt(0))}}
+function lzw(out,minSize,data){
+  out.byte(minSize);const clear=1<<minSize,eoi=clear+1;let next=eoi+1,size=minSize+1,cur=0,bits=0;
+  let block=[];const flushByte=b=>{block.push(b);if(block.length===255){out.byte(255);out.bytes(block);block=[]}};
+  const emit=c=>{cur|=c<<bits;bits+=size;while(bits>=8){flushByte(cur&255);cur>>=8;bits-=8}};
+  let dict=new Map();emit(clear);let prefix=data[0];
+  for(let i=1;i<data.length;i++){const k=data[i],key=prefix<<8|k,c=dict.get(key);
+    if(c!==undefined){prefix=c;continue}
+    emit(prefix);
+    if(next===4096){emit(clear);dict=new Map();next=eoi+1;size=minSize+1}
+    else{if(next>=1<<size)size++;dict.set(key,next++)}
+    prefix=k}
+  emit(prefix);emit(eoi);if(bits>0)flushByte(cur&255);
+  if(block.length){out.byte(block.length);out.bytes(block)}out.byte(0);
+}
+
+/* ---------------- Einstellungen ---------------- */
+let patchBuf={};
+const save=debounce(async()=>{const body=patchBuf;patchBuf={};
+  try{S=await api("/api/settings",{body});renderSettings()}catch(e){toast("Nicht gespeichert: "+e.message,1)}},350);
+function queueSave(p){const n=p.night?Object.assign({},patchBuf.night,p.night):patchBuf.night;
+  patchBuf=Object.assign({},patchBuf,p);if(n)patchBuf.night=n;save()}
+function seg(id,val,onPick){const el=$("#"+id);el.querySelectorAll("button").forEach(b=>{b.setAttribute("aria-pressed",String(+b.dataset.v===val));b.onclick=()=>onPick(+b.dataset.v)})}
+function renderSettings(){
+  seg("mode",S.mode,v=>{S.mode=v;renderSettings();queueSave({mode:v})});
+  $("#modeHint").textContent=["Es läuft immer die zuletzt gewählte Animation.","Die Playlist wird der Reihe nach abgespielt.","Aus der Playlist wird zufällig gewählt."][S.mode];
+  $("#intervalField").classList.toggle("hide",S.mode===0);
+  if(document.activeElement!==$("#interval"))$("#interval").value=S.interval;
+  $("#speed").value=S.speed;$("#speedVal").textContent=S.speed+" %";
+  $("#brightness").value=S.brightness;$("#brightnessVal").textContent=S.brightness+" %";
+  $("#blHint").textContent=S.backlightPin>=0?"Regelt die Hintergrundbeleuchtung (GPIO "+S.backlightPin+").":"Abgedunkelt wird per Software. Für echtes Dimmen BLK an einen GPIO legen (siehe Anleitung).";
+  seg("rotation",S.rotation,v=>{S.rotation=v;renderSettings();queueSave({rotation:v})});
+  const n=S.night;$("#nightOn").checked=n.enabled;$("#nightStart").value=hm(n.start);$("#nightEnd").value=hm(n.end);
+  seg("nightAction",n.action,v=>{n.action=v;renderSettings();queueSave({night:{action:v}})});
+  $("#nightGifField").classList.toggle("hide",n.action!==2);$("#nightDimField").classList.toggle("hide",n.action!==1);
+  $("#nightDim").value=n.dim;$("#nightDimVal").textContent=n.dim+" %";
+  if(![...$("#tz").options].some(o=>o.value===S.tz)){const o=new Option("Eigene: "+S.tz,S.tz);$("#tz").add(o)}
+  $("#tz").value=S.tz;
+  if(document.activeElement!==$("#name"))$("#name").value=S.name;
+  $("#txPower").value=String(S.txPower||0);
+  if(document.activeElement!==$("#hostname"))$("#hostname").value=S.hostname;
+  fillNightGifs();
+}
+function fillNightGifs(){const sel=$("#nightGif");if(!S.night)return;sel.innerHTML="";
+  for(const f of FILES)sel.add(new Option(prettyName(f.name),f.name));
+  if(!FILES.some(f=>f.name===S.night.gif))sel.add(new Option(S.night.gif+" (fehlt)",S.night.gif));sel.value=S.night.gif}
+$("#interval").onchange=e=>queueSave({interval:+e.target.value});
+$("#speed").oninput=e=>{$("#speedVal").textContent=e.target.value+" %";queueSave({speed:+e.target.value})};
+$("#brightness").oninput=e=>{$("#brightnessVal").textContent=e.target.value+" %";queueSave({brightness:+e.target.value})};
+$("#nightOn").onchange=e=>queueSave({night:{enabled:e.target.checked}});
+$("#nightStart").onchange=e=>queueSave({night:{start:mins(e.target.value)}});
+$("#nightEnd").onchange=e=>queueSave({night:{end:mins(e.target.value)}});
+$("#nightDim").oninput=e=>{$("#nightDimVal").textContent=e.target.value+" %";queueSave({night:{dim:+e.target.value}})};
+$("#nightGif").onchange=e=>queueSave({night:{gif:e.target.value}});
+$("#tz").onchange=e=>queueSave({tz:e.target.value});
+$("#txPower").onchange=e=>queueSave({txPower:+e.target.value});
+$("#saveName").onclick=async()=>{try{S=await api("/api/settings",{body:{name:$("#name").value,hostname:$("#hostname").value}});renderSettings();loadStatus();toast("Gespeichert")}catch(e){toast(e.message,1)}};
+
+/* ---------------- WLAN ---------------- */
+function renderWifiState(){
+  const w=$("#wifiState");
+  if(ST.mode==="sta")w.textContent=`Verbunden mit „${ST.ssid}“ · Signal ${ST.rssi} dBm · ${ST.ip}`;
+  else if(ST.mode==="ap")w.textContent=ST.ssid?`„${ST.ssid}“ ist gerade nicht erreichbar. Der Hamster versucht es jede Minute erneut.`:"Noch kein WLAN eingerichtet. Wähle dein Netzwerk aus.";
+  else w.textContent="Verbinde …";
+  if(!$("#ssid").value&&ST.ssid)$("#ssid").value=ST.ssid;
+}
+function bars(r){const n=r>-55?4:r>-67?3:r>-78?2:1;return'<span class="bars" aria-label="Signal '+n+' von 4">'+[1,2,3,4].map(i=>`<i class="${i<=n?"on":""}" style="height:${i*3+2}px"></i>`).join("")+"</span>"}
+$("#scan").onclick=async()=>{const b=$("#scan");b.disabled=true;b.textContent="Suche …";$("#nets").innerHTML="";
+  try{for(let i=0;i<20;i++){const j=await api("/api/scan");if(!j.scanning){
+      const nets=j.networks.sort((a,b)=>b.rssi-a.rssi);
+      $("#nets").innerHTML=nets.length?"":'<p class="mute">Keine Netzwerke gefunden.</p>';
+      for(const n of nets){const e=document.createElement("button");e.className="net";e.type="button";
+        e.innerHTML=`<span>${n.ssid.replace(/</g,"&lt;")}${n.open?' <span class="mute small">offen</span>':""}</span>${bars(n.rssi)}`;
+        e.onclick=()=>{$$(".net").forEach(x=>x.classList.remove("sel"));e.classList.add("sel");$("#ssid").value=n.ssid;$("#pass").focus()};$("#nets").appendChild(e)}
+      break}await new Promise(r=>setTimeout(r,1200))}}
+  catch(e){toast(e.message,1)}b.disabled=false;b.textContent="Netzwerke suchen"};
+$("#saveWifi").onclick=async()=>{const ssid=$("#ssid").value.trim();if(!ssid)return toast("Bitte Netzwerk wählen",1);
+  const body={ssid};if($("#pass").value)body.pass=$("#pass").value;
+  try{await api("/api/wifi",{body});toast("Gespeichert – der Hamster startet neu und verbindet sich",0);
+    $("#wifiState").textContent=`Neustart … Danach erreichst du ihn unter http://${S.hostname}.local oder über die IP, die kurz auf dem Display steht.`}catch(e){toast(e.message,1)}};
+
+/* ---------------- OTA ---------------- */
+$("#fwBtn").onclick=()=>$("#fw").click();
+$("#fw").onchange=()=>{const f=$("#fw").files[0];if(!f)return;
+  if(!confirm(`Firmware „${f.name}“ (${kb(f.size)}) installieren?`)){$("#fw").value="";return}
+  const fd=new FormData();fd.append("firmware",f,f.name);const x=new XMLHttpRequest();
+  $("#fwMeter").classList.remove("hide");$("#fwText").textContent="lade hoch …";
+  x.open("POST","/api/update");x.upload.onprogress=e=>{if(e.lengthComputable){const p=e.loaded/e.total*100;$("#fwBar").style.width=p+"%";$("#fwText").textContent=Math.round(p)+" %"}};
+  x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(e){}
+    if(x.status===200&&j.ok){$("#fwText").textContent="Installiert. Neustart …";waitReboot()}else{$("#fwText").textContent=j.error||"Fehlgeschlagen";toast(j.error||"Update fehlgeschlagen",1)}};
+  x.onerror=()=>{$("#fwText").textContent="Verbindung abgebrochen";};x.send(fd);$("#fw").value=""};
+async function waitReboot(){await new Promise(r=>setTimeout(r,4000));for(let i=0;i<40;i++){try{await api("/api/status");location.reload();return}catch(e){await new Promise(r=>setTimeout(r,1500))}}}
+
+/* ---------------- Geraet ---------------- */
+function renderInfo(){if(!ST.version)return;const up=ST.uptime,d=Math.floor(up/86400),h=Math.floor(up%86400/3600),m=Math.floor(up%3600/60);
+  const rows=[["Firmware","v"+ST.version],["Chip",ST.chip+", "+kb(ST.flash)+" Flash"],["Laufzeit",(d?d+" T. ":"")+h+" Std. "+m+" Min."],
+    ["Freier RAM",kb(ST.heap)+" (min. "+kb(ST.heapMin)+")"],["Bildrate",ST.fps+" fps · "+ST.decodeMs+" ms/Frame"+(ST.turbo?" · Turbo":"")],
+    ["Firmware-Größe",kb(ST.sketch)+(ST.sketchFree?" · OTA-Platz "+kb(ST.sketchFree):" · ohne OTA")],["Animationen",kb(ST.fsUsed)+" von "+kb(ST.fsTotal)]];
+  $("#info").innerHTML=rows.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("")}
+$("#reboot").onclick=async()=>{if(!confirm("Hamster neu starten?"))return;try{await api("/api/reboot",{post:1});toast("Startet neu …");waitReboot()}catch(e){toast(e.message,1)}};
+$("#factory").onclick=async()=>{if(!confirm("Alle Einstellungen und WLAN-Daten löschen? Die Animationen bleiben."))return;
+  try{await api("/api/factory",{post:1});toast("Zurückgesetzt – verbinde dich danach mit dem WLAN „DiGi-Hami-…“")}catch(e){toast(e.message,1)}};
+$("#theme").onclick=()=>{const r=document.documentElement,cur=r.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+  r.dataset.theme=cur==="light"?"dark":"light";try{localStorage.hamiTheme=r.dataset.theme}catch(e){}};
+try{if(localStorage.hamiTheme)document.documentElement.dataset.theme=localStorage.hamiTheme}catch(e){}
+
+/* ---------------- Start ---------------- */
+(async()=>{
+  try{S=await api("/api/settings");renderSettings()}catch(e){toast("Keine Verbindung zum Hamster",1)}
+  await loadFiles();await loadStatus();
+  if(ST.mode==="ap"&&!ST.ssid)$("#tab-sys").click();
+  setInterval(()=>{if(!document.hidden)loadStatus()},5000);
+})();
+</script>
+</body>
+</html>

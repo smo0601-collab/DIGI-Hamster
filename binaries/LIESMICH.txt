@@ -1,0 +1,14 @@
+DiGi Hami v2 - fertig kompilierte Dateien (ESP32-C3 Super Mini, 4 MB Flash)
+==========================================================================
+
+firmware.factory.bin  Bootloader + Partitionstabelle + Firmware (ab Adresse 0x0)
+littlefs.bin          Dateisystem mit allen 8 Animationen   (ab Adresse 0x290000)
+firmware.bin          nur die Firmware - fuer das Update ueber die Web-Oberflaeche
+                      (System -> Firmware-Update), GIFs bleiben erhalten
+
+Komplett neu flashen mit esptool (pip install esptool):
+
+  esptool --chip esp32c3 --baud 921600 write-flash 0x0 firmware.factory.bin 0x290000 littlefs.bin
+
+Alternativ im Browser (Chrome/Edge) mit https://espressif.github.io/esptool-js/
+und den gleichen zwei Dateien + Adressen.
