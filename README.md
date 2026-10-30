@@ -1,6 +1,6 @@
 # 🐹 DiGi Hami v2: dein digitaler Schreibtisch-Hamster
 
-![DiGi Hami](images/digihami_hero.png)
+![DiGi Hami]
 
 Version 2 ist eine komplett neu geschriebene Firmware für den **ESP32-C3 Super Mini** mit dem runden **1,28″-GC9A01-Display (240 × 240)**. Neu sind eine Web-Oberfläche, die Einrichtung per WLAN und 14 neue Hamster-Animationen.
 
