@@ -31,6 +31,8 @@ struct Settings {
   // WLAN (getrennt gespeichert, wird nie per API ausgegeben)
   String wifiSsid;
   String wifiPass;
+  // Zugriffsschutz (getrennt gespeichert, wird nie per API ausgegeben)
+  String adminPass;                    // leer = Web-Oberflaeche ohne Passwort
   // Kilometerzaehler
   double odoTotal = 0;                 // Meter
   double odoToday = 0;                 // Meter
@@ -47,5 +49,6 @@ extern Settings cfg;
 void settingsLoad();
 void settingsSave();
 void settingsSaveWifi();
+void settingsSaveAdmin();
 void settingsSaveOdo();
 void settingsFactoryReset();

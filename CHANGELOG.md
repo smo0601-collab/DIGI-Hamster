@@ -1,5 +1,12 @@
 # Änderungen
 
+## v2.1.0
+
+**Neu**
+- Zugriffsschutz für die Web-Oberfläche: Benutzer `admin`, Passwort unter *System → Zugriffsschutz* festlegen (ab Werk leer = kein Schutz). Schützt Seite, API, Uploads, Firmware-Update und GIF-Dateien.
+- BOOT-Taste 10 s löscht jetzt zusätzlich das Web-Passwort (falls vergessen).
+- Neuer API-Aufruf `POST /api/password`.
+
 ## v2.0.0
 
 Komplett neu geschriebene Firmware für ESP32-C3 Super Mini + GC9A01 (gleiche Verkabelung wie v1.0).

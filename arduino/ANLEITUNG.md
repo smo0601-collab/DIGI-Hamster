@@ -124,6 +124,7 @@ Statt Build-Flags (wie bei PlatformIO) änderst du in der Arduino IDE direkt **`
 | `error: 'GIF_DRAW_COOKED' was not declared` | AnimatedGIF zu alt → aktualisieren |
 | Animation ruckelt | Unter *System → Gerät* stehen Bildrate und ms/Frame. Liegen die ms/Frame über der GIF-Framedauer (~50 ms), ist der Dekoder am Limit: `TFT_SPI_HZ` auf 80 MHz (kurze Kabel), oder im Tab *Wiedergabe* das Tempo senken |
 | Web-Oberfläche lädt langsam | Beim ersten Aufruf lädt der Browser die Vorschaubilder einmalig, danach kommen sie aus dem Cache. Bei schwachem Signal unter *System → WLAN → Sendeleistung* eine höhere Stufe wählen |
+| Browser fragt nach Benutzer/Passwort | Benutzer `admin`, Passwort aus *System → Zugriffsschutz*; vergessen → BOOT-Taste 10 s halten |
 | Kein Text im Serial-Monitor | **USB CDC On Boot: Enabled** |
 | Display zeigt „Keine Animation“ | Schritt 4a oder 4b |
 | Upload LittleFS: „Partition entry not found“ | Sketch einmal normal hochladen, Partition Scheme prüfen, Serial-Monitor schließen |

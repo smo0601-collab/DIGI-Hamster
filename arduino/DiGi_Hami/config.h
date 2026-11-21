@@ -4,7 +4,7 @@
 // ============================================================================
 #pragma once
 
-#define HAMI_VERSION "2.0.0"
+#define HAMI_VERSION "2.1.0"
 
 // ---------------------------------------------------------------------------
 //  Display-Pins (identisch zu v1.0 -> bestehende Verkabelung passt)
@@ -51,7 +51,7 @@
 // BOOT-Taste der Super Mini (GPIO9, gegen GND). Zur Laufzeit nutzbar:
 //   kurz   = naechste Animation
 //   2 s    = Info-Bildschirm (IP-Adresse)
-//   10 s   = WLAN-Zugangsdaten loeschen + Neustart
+//   10 s   = WLAN-Zugangsdaten + Web-Passwort loeschen + Neustart
 #ifndef BTN_PIN
 #define BTN_PIN 9
 #endif
@@ -67,6 +67,11 @@
 #define DEFAULT_HOSTNAME "digihami"
 #define DEFAULT_TZ "CET-1CEST,M3.5.0,M10.5.0/3"   // Deutschland/Mitteleuropa
 #define WIFI_CONNECT_TIMEOUT_MS 15000
+
+// Zugriffsschutz der Web-Oberflaeche: Benutzername ist fest "admin",
+// das Passwort wird in der Web-Oberflaeche gesetzt (System -> Zugriffsschutz).
+// Leeres Passwort = kein Schutz (Werkseinstellung).
+#define ADMIN_USER "admin"
 
 // Sendeleistung. Viele ESP32-C3 Super Mini verbinden sich bei voller Leistung
 // nicht (Antennen-Layout) - 8,5 dBm ist der bekannte Fix. Bei gutem Board und

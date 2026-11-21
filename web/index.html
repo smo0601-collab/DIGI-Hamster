@@ -331,6 +331,23 @@ footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
     </div>
 
     <div class="block">
+      <h2>Zugriffsschutz</h2>
+      <p class="mute" id="authState">–</p>
+      <div class="field stack">
+        <label for="pw1">Neues Passwort für Benutzer „admin“</label>
+        <input type="password" id="pw1" maxlength="32" autocomplete="new-password">
+      </div>
+      <div class="field stack">
+        <label for="pw2">Passwort wiederholen</label>
+        <input type="password" id="pw2" maxlength="32" autocomplete="new-password">
+      </div>
+      <div class="row">
+        <button class="btn primary" id="savePw">Passwort speichern</button>
+        <button class="btn danger hide" id="clearPw">Schutz entfernen</button>
+      </div>
+    </div>
+
+    <div class="block">
       <h2>Firmware-Update</h2>
       <p class="mute hide" id="noOta">Dieses Gerät wurde mit einem Partitionsschema ohne OTA geflasht (z. B. „No OTA“ in der Arduino IDE). Neue Firmware bitte per USB aufspielen – deine Animationen bleiben dabei erhalten.</p>
       <div id="otaBox">
@@ -370,6 +387,7 @@ async function api(path,opt={}){
   const o={method:opt.body!==undefined||opt.post?"POST":"GET",headers:{}};
   if(opt.body!==undefined){o.body=JSON.stringify(opt.body);o.headers["Content-Type"]="application/json"}
   const r=await fetch(path,o);let j={};try{j=await r.json()}catch(e){}
+  if(r.status===401)throw new Error("Anmeldung erforderlich – Seite neu laden und mit „admin“ anmelden");
   if(!r.ok||j.ok===false)throw new Error(j.error||("HTTP "+r.status));return j}
 const kb=b=>b<1024*1024?(b/1024).toFixed(0)+" KB":(b/1048576).toFixed(2).replace(".",",")+" MB";
 function km(m){if(m==null)return"–";return m<1000?Math.round(m)+" m":(m/1000).toLocaleString("de-DE",{maximumFractionDigits:m<100000?2:0})+" km"}
@@ -408,6 +426,8 @@ async function loadStatus(){
   document.body.classList.toggle("paused",!cur);
   if(ST.timeValid)$("#clock").textContent="Uhrzeit auf dem Gerät: "+ST.time+(ST.night?" · Nachtruhe aktiv":"");
   else $("#clock").textContent=ST.mode==="sta"?"Uhrzeit wird geholt …":"Ohne WLAN-Verbindung kennt der Hamster die Uhrzeit nicht – Nachtruhe braucht Internet.";
+  $("#authState").textContent=ST.auth?"Geschützt: Beim Öffnen fragt der Browser nach Benutzer „admin“ und Passwort.":"Kein Passwort gesetzt – jeder in deinem WLAN kann die Einstellungen ändern. Benutzer ist „admin“, das Passwort legst du hier fest.";
+  $("#clearPw").classList.toggle("hide",!ST.auth);
   const ota=ST.sketchFree>=ST.sketch;$("#otaBox").classList.toggle("hide",!ota);$("#noOta").classList.toggle("hide",ota);
   if($("#t-sys").classList.contains("show"))renderInfo();
   renderWifiState();
@@ -713,6 +733,15 @@ $("#saveWifi").onclick=async()=>{const ssid=$("#ssid").value.trim();if(!ssid)ret
   const body={ssid};if($("#pass").value)body.pass=$("#pass").value;
   try{await api("/api/wifi",{body});toast("Gespeichert – der Hamster startet neu und verbindet sich",0);
     $("#wifiState").textContent=`Neustart … Danach erreichst du ihn unter http://${S.hostname}.local oder über die IP, die kurz auf dem Display steht.`}catch(e){toast(e.message,1)}};
+
+/* ---------------- Zugriffsschutz ---------------- */
+$("#savePw").onclick=async()=>{const a=$("#pw1").value,b=$("#pw2").value;
+  if(!a)return toast("Bitte ein Passwort eingeben",1);
+  if(a!==b)return toast("Die Passwörter stimmen nicht überein",1);
+  try{await api("/api/password",{body:{password:a}});$("#pw1").value=$("#pw2").value="";
+    toast("Passwort gesetzt – melde dich gleich mit „admin“ an");setTimeout(()=>location.reload(),1500)}catch(e){toast(e.message,1)}};
+$("#clearPw").onclick=async()=>{if(!confirm("Passwortschutz entfernen? Danach kann jeder in deinem WLAN die Einstellungen ändern."))return;
+  try{await api("/api/password",{body:{password:""}});toast("Passwortschutz entfernt");loadStatus()}catch(e){toast(e.message,1)}};
 
 /* ---------------- OTA ---------------- */
 $("#fwBtn").onclick=()=>$("#fw").click();

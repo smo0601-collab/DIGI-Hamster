@@ -115,6 +115,7 @@ void settingsLoad() {
   String js = prefs.getString("cfg", "");
   cfg.wifiSsid = prefs.getString("ssid", "");
   cfg.wifiPass = prefs.getString("pass", "");
+  cfg.adminPass = prefs.getString("apass", "");
   cfg.odoTotal = prefs.getDouble("odoT", 0);
   cfg.odoToday = prefs.getDouble("odoD", 0);
   cfg.odoDay = prefs.getInt("odoDay", -1);
@@ -142,6 +143,12 @@ void settingsSaveWifi() {
   prefs.begin(NS, false);
   prefs.putString("ssid", cfg.wifiSsid);
   prefs.putString("pass", cfg.wifiPass);
+  prefs.end();
+}
+
+void settingsSaveAdmin() {
+  prefs.begin(NS, false);
+  prefs.putString("apass", cfg.adminPass);
   prefs.end();
 }
 

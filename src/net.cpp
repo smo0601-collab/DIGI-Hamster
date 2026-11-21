@@ -5,6 +5,7 @@
 #include <LittleFS.h>
 #include <Update.h>
 #include <WebServer.h>
+#include <uri/UriBraces.h>
 #include <WiFi.h>
 #include <esp_system.h>
 #include "config.h"
@@ -176,6 +177,29 @@ void netEvaluateNight() {
 }
 
 // ---------------------------------------------------------------------------
+//  Zugriffsschutz (HTTP Basic Auth, Benutzer "admin")
+//  Leeres Passwort = offen. Der Browser fragt einmal nach den Zugangsdaten und
+//  schickt sie danach bei jeder Anfrage automatisch mit.
+// ---------------------------------------------------------------------------
+static bool authOk() {
+  if (cfg.adminPass.isEmpty()) return true;
+  return server.authenticate(ADMIN_USER, cfg.adminPass.c_str());
+}
+
+static bool requireAuth() {
+  if (authOk()) return true;
+  server.requestAuthentication(BASIC_AUTH, "DiGi Hami", "Anmeldung erforderlich (Benutzer: admin)");
+  return false;
+}
+
+// Handler nur nach erfolgreicher Anmeldung ausfuehren
+static WebServer::THandlerFunction guarded(void (*h)()) {
+  return [h]() {
+    if (requireAuth()) h();
+  };
+}
+
+// ---------------------------------------------------------------------------
 //  HTTP-Handler
 // ---------------------------------------------------------------------------
 static void hIndex() {
@@ -220,6 +244,7 @@ static void hStatus() {
   d["odoToday"] = round(cfg.odoToday);
   d["odoTotal"] = round(cfg.odoTotal);
   d["backlightPin"] = TFT_BL;
+  d["auth"] = !cfg.adminPass.isEmpty();
   d["chip"] = ESP.getChipModel();
   d["flash"] = ESP.getFlashChipSize();
   d["sketch"] = ESP.getSketchSize();
@@ -323,6 +348,29 @@ static void hFactory() {
   scheduleRestart(800);
 }
 
+static void hPassword() {
+  JsonDocument body;
+  if (!readBody(body)) return sendErr(400, "Ungueltiges JSON");
+  String pw = body["password"] | "";
+  if (pw.length() > 32) return sendErr(400, "Passwort zu lang (max. 32 Zeichen)");
+  cfg.adminPass = pw;
+  settingsSaveAdmin();
+  Serial.printf("[Auth] Passwort %s\n", pw.length() ? "gesetzt" : "entfernt");
+  sendOk(pw.length() ? "Passwort gesetzt" : "Passwortschutz entfernt");
+}
+
+// GIF-Dateien ausliefern (statt serveStatic, damit der Zugriffsschutz greift)
+static void hGif() {
+  String n = server.pathArg(0);
+  if (!validName(n) || !gifExists(n)) return sendErr(404, "Datei nicht gefunden");
+  File f = LittleFS.open(String(GIF_DIR) + "/" + n, "r");
+  if (!f) return sendErr(404, "Datei nicht gefunden");
+  // URLs tragen ?v=<Groesse> -> der Browser darf sie dauerhaft cachen
+  server.sendHeader("Cache-Control", "private, max-age=31536000, immutable");
+  server.streamFile(f, "image/gif");
+  f.close();
+}
+
 static void hScan() {
   int n = WiFi.scanComplete();
   JsonDocument d;
@@ -372,6 +420,10 @@ static void hUploadChunk() {
   if (up.status == UPLOAD_FILE_START) {
     upError = "";
     upBytes = 0;
+    if (!authOk()) {  // Antwort (401) kommt im Abschluss-Handler
+      upError = "Anmeldung erforderlich";
+      return;
+    }
     upName = server.hasArg("name") ? cleanName(server.arg("name")) : cleanName(up.filename);
     size_t freeB = LittleFS.totalBytes() - LittleFS.usedBytes();
     size_t len = server.clientContentLength();
@@ -451,6 +503,10 @@ static void hOtaChunk() {
   if (up.status == UPLOAD_FILE_START) {
     otaOk = false;
     otaError = "";
+    if (!authOk()) {  // Antwort (401) kommt im Abschluss-Handler
+      otaError = "Anmeldung erforderlich";
+      return;
+    }
     playerSuspend();
     playerShowMessage("Update", "Firmware wird", "installiert ...", 120000);
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) otaError = Update.errorString();
@@ -504,31 +560,31 @@ static void hNotFound() {
 static void setupRoutes() {
   server.on("/", HTTP_GET, [] {
     if (captiveRedirect()) return;
-    hIndex();
+    if (requireAuth()) hIndex();
   });
   // Captive-Portal-Erkennung von Android / iOS / Windows
   for (const char* p : {"/generate_204", "/gen_204", "/hotspot-detect.html", "/connecttest.txt", "/ncsi.txt",
                         "/fwlink", "/redirect"}) {
     server.on(p, HTTP_GET, [] {
-      if (!captiveRedirect()) hIndex();
+      if (!captiveRedirect() && requireAuth()) hIndex();
     });
   }
-  server.on("/api/status", HTTP_GET, hStatus);
-  server.on("/api/files", HTTP_GET, hFiles);
-  server.on("/api/settings", HTTP_GET, hGetSettings);
-  server.on("/api/settings", HTTP_POST, hPostSettings);
-  server.on("/api/play", HTTP_POST, hPlay);
-  server.on("/api/next", HTTP_POST, hNext);
-  server.on("/api/delete", HTTP_POST, hDelete);
-  server.on("/api/identify", HTTP_POST, hIdentify);
-  server.on("/api/reboot", HTTP_POST, hReboot);
-  server.on("/api/factory", HTTP_POST, hFactory);
-  server.on("/api/scan", HTTP_GET, hScan);
-  server.on("/api/wifi", HTTP_POST, hWifi);
-  server.on("/api/upload", HTTP_POST, hUploadDone, hUploadChunk);
-  server.on("/api/update", HTTP_POST, hOtaDone, hOtaChunk);
-  // GIF-URLs tragen ?v=<Groesse> -> der Browser darf sie dauerhaft cachen
-  server.serveStatic("/gifs/", LittleFS, "/gifs/", "public, max-age=31536000, immutable");
+  server.on("/api/status", HTTP_GET, guarded(hStatus));
+  server.on("/api/files", HTTP_GET, guarded(hFiles));
+  server.on("/api/settings", HTTP_GET, guarded(hGetSettings));
+  server.on("/api/settings", HTTP_POST, guarded(hPostSettings));
+  server.on("/api/play", HTTP_POST, guarded(hPlay));
+  server.on("/api/next", HTTP_POST, guarded(hNext));
+  server.on("/api/delete", HTTP_POST, guarded(hDelete));
+  server.on("/api/identify", HTTP_POST, guarded(hIdentify));
+  server.on("/api/reboot", HTTP_POST, guarded(hReboot));
+  server.on("/api/factory", HTTP_POST, guarded(hFactory));
+  server.on("/api/scan", HTTP_GET, guarded(hScan));
+  server.on("/api/wifi", HTTP_POST, guarded(hWifi));
+  server.on("/api/password", HTTP_POST, guarded(hPassword));
+  server.on("/api/upload", HTTP_POST, guarded(hUploadDone), hUploadChunk);
+  server.on("/api/update", HTTP_POST, guarded(hOtaDone), hOtaChunk);
+  server.on(UriBraces("/gifs/{}"), HTTP_GET, guarded(hGif));
   server.onNotFound(hNotFound);
   const char* hdrs[] = {"Host"};
   server.collectHeaders(hdrs, 1);

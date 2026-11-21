@@ -18,7 +18,8 @@
 //  * Web-Oberflaeche: GIFs hochladen/verwalten, Playlist, Helligkeit,
 //    Geschwindigkeit, Drehung, Nachtruhe, WLAN, Firmware-Update (OTA)
 //  * Einrichtung per Access Point + Captive Portal (QR-Code auf dem Display)
-//  * BOOT-Taste: kurz = naechste Animation, 2 s = Info, 10 s = WLAN-Reset
+//  * BOOT-Taste: kurz = naechste Animation, 2 s = Info,
+//    10 s = WLAN-Daten und Web-Passwort loeschen
 // ============================================================================
 #include <Arduino.h>
 #include <LittleFS.h>
@@ -47,10 +48,12 @@ static void buttonLoop() {
     uint32_t held = now - downAt;
     if (held > 10000 && !resetShown) {
       resetShown = true;
-      playerShowMessage("WLAN-Reset", "Zugangsdaten", "geloescht", 3000);
+      playerShowMessage("Reset", "WLAN + Passwort", "geloescht", 3000);
       cfg.wifiSsid = "";
       cfg.wifiPass = "";
       settingsSaveWifi();
+      cfg.adminPass = "";
+      settingsSaveAdmin();
       delay(1500);
       ESP.restart();
     } else if (held > 2000 && !infoShown) {

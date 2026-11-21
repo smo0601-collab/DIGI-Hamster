@@ -205,7 +205,21 @@ Oben siehst du live, was gerade auf dem Display läuft, dazu den Kilometerzähle
 
 **Nachtruhe:** Zeitraum (z. B. 22:00 bis 07:00) und was nachts passiert: *Schlafen* (Schlaf-Animation), *Dimmen* oder *Display aus*. Braucht WLAN mit Internet, weil die Uhrzeit per NTP geholt wird. Startest du nachts von Hand eine Animation, hat das Vorrang bis zum Ende der Nachtruhe.
 
-**System:** Name des Hamsters, Netzwerkname (`xyz.local`), WLAN, Firmware-Update, Neustart, Werkseinstellungen (die GIFs bleiben dabei erhalten) und Geräte-Infos wie RAM, Bildrate und Speicher.
+**System:** Name des Hamsters, Netzwerkname (`xyz.local`), WLAN, Zugriffsschutz, Firmware-Update, Neustart, Werkseinstellungen (die GIFs bleiben dabei erhalten) und Geräte-Infos wie RAM, Bildrate und Speicher.
+
+### Zugriffsschutz (Benutzer „admin“)
+
+Ab Werk ist das Passwort **leer**: Die Web-Oberfläche ist ohne Anmeldung erreichbar, so wie bisher. Damit nicht jeder in deinem WLAN deinen Hamster umstellen kann, setzt du unter **System → Zugriffsschutz** ein Passwort:
+
+1. Neues Passwort zweimal eingeben (max. 32 Zeichen) → **Passwort speichern**.
+2. Die Seite lädt neu, der Browser fragt nach den Zugangsdaten: Benutzer **`admin`**, dein Passwort.
+3. Der Browser merkt sich die Anmeldung, bis du ihn schließt.
+
+Geschützt ist danach alles: die Seite, alle Einstellungen, Uploads, das Firmware-Update und die GIF-Dateien. Mit **Schutz entfernen** schaltest du das Passwort wieder ab.
+
+**Passwort vergessen?** BOOT-Taste **10 Sekunden** gedrückt halten. Das löscht das Passwort und die WLAN-Zugangsdaten, der Hamster startet im Einrichtungsmodus (Animationen und Einstellungen bleiben erhalten).
+
+> Hinweis: Das ist ein einfacher Schutz für dein Heimnetz (HTTP-Basic-Authentifizierung ohne Verschlüsselung). Den Hamster bitte nicht direkt ins Internet freigeben.
 
 ![Nachtruhe am Handy](images/webui_handy_nachtruhe.png)
 
@@ -215,7 +229,7 @@ Oben siehst du live, was gerade auf dem Display läuft, dazu den Kilometerzähle
 |---|---|
 | kurz | nächste Animation |
 | 2 Sekunden | Info-Bildschirm mit IP-Adresse und QR-Code |
-| 10 Sekunden | WLAN-Zugangsdaten löschen und Neustart in den Einrichtungsmodus |
+| 10 Sekunden | WLAN-Zugangsdaten und Web-Passwort löschen, Neustart in den Einrichtungsmodus |
 
 ---
 
@@ -265,6 +279,8 @@ Einstellbar in `platformio.ini` unter `build_flags` (Details in `src/config.h`):
 | Animation ruckelt | Unter *System → Gerät* stehen Bildrate und ms/Frame. Liegen die ms/Frame über der GIF-Framedauer (~50 ms), ist der Dekoder am Limit: `TFT_SPI_HZ` auf 80 MHz (kurze Kabel), oder im Tab *Wiedergabe* das Tempo senken |
 | Web-Oberfläche lädt langsam | Beim ersten Aufruf lädt der Browser die Vorschaubilder einmalig, danach kommen sie aus dem Cache. Bei schwachem Signal unter *System → WLAN → Sendeleistung* eine höhere Stufe wählen |
 | WLAN verbindet nicht | Die C3 Super Mini hat eine schwache Antenne; die Firmware nutzt deshalb 8,5 dBm. 2,4-GHz-Netz prüfen (5 GHz geht nicht), näher an den Router |
+| Passwort vergessen | BOOT-Taste 10 Sekunden halten: löscht Passwort und WLAN-Daten |
+| Browser fragt nach Benutzer/Passwort | Benutzer ist `admin`, das Passwort hast du unter *System → Zugriffsschutz* gesetzt |
 | `digihami.local` geht nicht | Manche Android-Geräte kennen kein mDNS → IP-Adresse nutzen (BOOT 2 s drücken zeigt sie an) |
 | Nachtruhe greift nicht | Braucht Internet für die Uhrzeit; im Tab Nachtruhe steht die Gerätezeit |
 | GIF wird abgelehnt | größer als 240 × 240 → über die Web-Oberfläche hochladen, die rechnet es um |
@@ -280,7 +296,7 @@ Einstellbar in `platformio.ini` unter `build_flags` (Details in `src/config.h`):
 - **AnimatedGIF-Fehler umgangen:** In Version 2.2.0 liefert der RGB565-„cooked“-Pfad an transparenten Stellen ungültige Pixel. Die Firmware liest die Zeilen deshalb selbst aus dem Framepuffer. GIFs mit **eigener Farbpalette pro Frame** (häufig bei aus Videos erzeugten GIFs) laufen automatisch über einen zweiten Zeichenpfad, der nur deckende Pixel direkt aufs Display schreibt. Beide Pfade wurden gegen eine Referenz-Dekodierung Frame für Frame pixelgenau getestet.
 - **Web-Oberfläche:** eine einzige HTML-Datei (`web/index.html`), die beim Build gzip-komprimiert (~15 KB) in die Firmware eingebettet wird. Sie funktioniert komplett offline, auch im Einrichtungs-Hotspot. GIF-Umrechnung und LZW-Kodierung laufen im Browser.
 - **Automatischer Build:** Bei jedem Push baut eine GitHub Action ([`.github/workflows/build.yml`](.github/workflows/build.yml)) die PlatformIO-Firmware und den Arduino-Sketch. Bei einem Versions-Tag (`v2.0.1` …) hängt sie Firmware und Dateisystem-Image automatisch als Release an.
-- **REST-API** (für eigene Skripte oder Home Assistant): `GET /api/status`, `GET /api/files`, `GET|POST /api/settings`, `POST /api/play?name=…`, `POST /api/next`, `POST /api/delete?name=…`, `POST /api/upload` (multipart), `POST /api/update` (Firmware), `POST /api/identify`, `POST /api/reboot`.
+- **REST-API** (für eigene Skripte oder Home Assistant): `GET /api/status`, `GET /api/files`, `GET|POST /api/settings`, `POST /api/play?name=…`, `POST /api/next`, `POST /api/delete?name=…`, `POST /api/upload` (multipart), `POST /api/update` (Firmware), `POST /api/identify`, `POST /api/reboot`, `POST /api/password`. Ist ein Passwort gesetzt, brauchen alle Aufrufe HTTP-Basic-Auth, z. B. `curl -u admin:PASSWORT http://digihami.local/api/status`.
 
 ---
 
