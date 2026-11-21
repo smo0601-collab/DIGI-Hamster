@@ -202,7 +202,7 @@ def to_screen(x, y, k, lx, ly):
 K = 1.12
 
 
-def scene_groom(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_putzt.gif", frames=24, delay=70):
+def scene_groom(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="hami_putzt.gif", frames=24, delay=70):
     imgs = []
     for f in range(frames):
         t = f / frames
@@ -226,7 +226,7 @@ def scene_groom(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_pu
     return save_gif(imgs, [delay] * frames, name, colors=80)
 
 
-def scene_yawn(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_gaehnt.gif", frames=32, delay=90):
+def scene_yawn(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="hami_gaehnt.gif", frames=32, delay=90):
     imgs = []
     for f in range(frames):
         t = f / frames
@@ -254,7 +254,7 @@ def scene_yawn(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_gae
     return save_gif(imgs, [delay] * frames, name, colors=80)
 
 
-def scene_coffee(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_kaffee.gif", frames=36, delay=90):
+def scene_coffee(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="hami_kaffee.gif", frames=36, delay=90):
     imgs = []
     for f in range(frames):
         t = f / frames
@@ -296,7 +296,7 @@ def scene_coffee(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_k
     return save_gif(imgs, [delay] * frames, name, colors=96)
 
 
-def scene_workout(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="../../extras/mehr/hami_hantel.gif", frames=28, delay=70):
+def scene_workout(fur=FUR_GOLD, wheel=WHEEL_AMBER, name="hami_hantel.gif", frames=28, delay=70):
     imgs = []
     for f in range(frames):
         t = f / frames
@@ -336,7 +336,7 @@ def bat(d, x, y, flap, sc=1.0):
                ((x + 1 * sc) * S, (y - 3 * sc) * S)], fill=col)
 
 
-def scene_halloween(fur=FUR_GOLD, name="../../extras/mehr/hami_halloween.gif", frames=24, delay=100):
+def scene_halloween(fur=FUR_GOLD, name="hami_halloween.gif", frames=24, delay=100):
     wheel = WHEEL_HALLOWEEN
     rnd = random.Random(31)
     stars = [(rnd.uniform(110, 210), rnd.uniform(30, 110), rnd.uniform(1.8, 3.2), rnd.uniform(0, 6.3))
@@ -370,7 +370,7 @@ def scene_halloween(fur=FUR_GOLD, name="../../extras/mehr/hami_halloween.gif", f
     return save_gif(imgs, [delay] * frames, name, colors=96)
 
 
-def scene_xmas(fur=FUR_GOLD, name="../../extras/mehr/hami_weihnachten.gif", frames=30, delay=100):
+def scene_xmas(fur=FUR_GOLD, name="hami_weihnachten.gif", frames=30, delay=100):
     wheel = WHEEL_XMAS
     rnd = random.Random(12)
     flakes = [(rnd.uniform(10, 230), rnd.uniform(0, 260), rnd.uniform(1.2, 2.6), rnd.uniform(0, 6.3),

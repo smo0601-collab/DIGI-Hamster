@@ -26,7 +26,7 @@ HEADER = """// =================================================================
 //  Werkzeuge-Menue:
 //    Board ............... ESP32C3 Dev Module
 //    USB CDC On Boot ..... Enabled
-//    Partition Scheme .... No OTA (2MB APP/2MB SPIFFS)
+//    Partition Scheme .... Custom  (nutzt partitions.csv aus diesem Ordner)
 //  Bibliotheken (Bibliotheksverwalter):
 //    LovyanGFX, AnimatedGIF, ArduinoJson
 //  Einstellungen (Pins, Helligkeit, SPI-Takt ...): config.h
@@ -54,12 +54,8 @@ def main():
     if os.path.isdir(gd):
         shutil.rmtree(gd)
     shutil.copytree(os.path.join(ROOT, "data", "gifs"), gd)
-    # Mit "No OTA" hat die Arduino-Variante ~1,9 MB Platz -> zusaetzliche Animationen gleich mitnehmen
-    mehr = os.path.join(ROOT, "extras", "mehr")
-    if os.path.isdir(mehr):
-        for n in sorted(os.listdir(mehr)):
-            if n.endswith(".gif"):
-                shutil.copy(os.path.join(mehr, n), gd)
+    # gleiche Partitionstabelle wie PlatformIO (Arduino IDE: Partition Scheme "Custom")
+    shutil.copy(os.path.join(ROOT, "partitions.csv"), DST)
     print("Arduino-Sketch aktualisiert:", DST)
 
 

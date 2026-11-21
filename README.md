@@ -17,7 +17,8 @@ Version 2 ist eine komplett neu geschriebene Firmware für den **ESP32-C3 Super 
 | Ordner / Datei | Inhalt |
 |---|---|
 | [`src/`](src) | Firmware-Quellcode (C++, PlatformIO) |
-| [`arduino/DiGi_Hami/`](arduino/DiGi_Hami) | derselbe Code als fertiger Arduino-Sketch, mit allen 14 Animationen ([Anleitung](arduino/ANLEITUNG.md)) |
+| [`arduino/DiGi_Hami/`](arduino/DiGi_Hami) | derselbe Code als fertiger Arduino-Sketch, mit den vorinstallierten Animationen ([Anleitung](arduino/ANLEITUNG.md)) |
+| [`partitions.csv`](partitions.csv) | Speicheraufteilung (2 × Firmware für Updates + Animationen), gilt für beide Varianten |
 | [`web/index.html`](web/index.html) | die Web-Oberfläche (wird in die Firmware eingebettet) |
 | [`data/gifs/`](data/gifs) | Animationen, die bei PlatformIO aufs Gerät kommen |
 | [`extras/`](extras) | weitere Animationen zum Hochladen über die Web-Oberfläche |
@@ -75,7 +76,7 @@ Der Hamster ist ein ESP32-C3, der GIF-Dateien aus seinem internen Speicher liest
 | `schneeflocke_rennt.gif` | Weißer Winterhamster im mintgrünen Rad |
 | `echter_hamster.gif` | **echter Hamster** im Laufrad (Filmaufnahme aus v1.0, neu aufbereitet für das runde Display) |
 
-Die gezeichneten Animationen sind für das runde Display gemacht: Das Laufrad füllt den Kreis exakt aus und passt damit zum 3D-gedruckten Rad, und die Loops sind nahtlos. Alle 8 zusammen belegen ~930 KB. Für eigene GIFs bleiben ~430 KB frei (PlatformIO) bzw. ~970 KB (Arduino IDE mit „No OTA“).
+Die gezeichneten Animationen sind für das runde Display gemacht: Das Laufrad füllt den Kreis exakt aus und passt damit zum 3D-gedruckten Rad, und die Loops sind nahtlos. 13 Animationen sind ab Werk installiert (~1 MB). Für eigene GIFs bleiben ~130 KB frei; mehr Platz schaffst du, indem du nicht benötigte Animationen (z. B. die Feiertags-Hamster außerhalb der Saison) in der Web-Oberfläche löschst. Der Überschlag liegt wegen seiner Größe (307 KB) in `extras/`.
 
 ### Noch mehr Hami
 
@@ -90,9 +91,10 @@ Die gezeichneten Animationen sind für das runde Display gemacht: Das Laufrad f�
 | `hami_halloween.gif` | Hexenhut, leuchtender Kürbis, Fledermäuse |
 | `hami_weihnachten.gif` | Weihnachtsmütze, Schal, Geschenk, Schnee |
 
-Sie liegen in `extras/mehr/`. Bei der **Arduino-IDE-Variante** sind sie schon im Sketch-Ordner enthalten und landen beim Dateisystem-Upload automatisch auf dem Board, zusammen mit den 8 anderen. Bei **PlatformIO** reicht der Speicher nicht für alle 14 gleichzeitig; lade dort die gewünschten über die Web-Oberfläche hoch.
+Sie sind ab Werk installiert (Ordner `data/gifs/`).
 
 **Extras** (über die Web-Oberfläche hochladen, wenn du sie willst):
+- `extras/hami_ueberschlag.gif`: Hami läuft zu schnell und überschlägt sich (307 KB)
 - `extras/echter_hamster_fluessig.gif`: der echte Hamster mit voller Bildrate (14 statt 7 fps, 430 KB). Vorher z. B. den Überschlag löschen, damit genug Platz ist.
 - `extras/schoko_rennt.gif`: Schoko-Hamster im Beeren-Rad
 
@@ -174,6 +176,27 @@ Falls nur das Dateisystem fehlt (Display zeigt „Keine Animation“): pioarduin
 **Bootloader erzwingen**, falls der Upload nicht klappt: BOOT halten, RESET kurz drücken, BOOT loslassen, dann erneut hochladen.
 
 ---
+
+## Updates
+
+Neue Versionen erscheinen unter **[Releases](../../releases)**. Zu jedem Release gehören:
+
+| Datei | Wofür |
+|---|---|
+| `DiGi-Hami-Update-v….bin` | **Update über die Web-Oberfläche**: *System → Firmware-Update → Update-Datei auswählen* |
+| `DiGi-Hami-Komplett-v….bin` | Komplett-Firmware für USB (esptool, ab Adresse `0x0`) |
+| `DiGi-Hami-Animationen-v….bin` | Dateisystem mit den Animationen (esptool, ab Adresse `0x2D0000`) |
+| `DiGi-Hami-Arduino-Sketch-v….zip` | der Sketch für die Arduino IDE |
+
+**Update über die Web-Oberfläche:**
+1. `DiGi-Hami-Update-v….bin` vom neuesten Release herunterladen.
+2. Web-Oberfläche → **System → Firmware-Update → Update-Datei auswählen**.
+3. Die Oberfläche prüft die Datei und zeigt die Version an („DiGi Hami v2.2.0 installieren? Installiert: v2.1.0“). Bestätigen.
+4. Nach dem Hochladen startet der Hamster neu und die Seite lädt sich selbst neu. Einstellungen, WLAN, Passwort und Animationen bleiben erhalten.
+
+Die falsche Datei erwischt? Die Web-Oberfläche lehnt die Komplett-Datei, das Animationen-Image und Firmware für andere Chips ab, bevor etwas hochgeladen wird. Bricht ein Update ab, startet der Hamster einfach mit der alten Version weiter.
+
+> **Einmalig ab v2.2.0:** Für Updates über WLAN braucht der Hamster zwei Firmware-Plätze im Speicher. Geräte, die vorher mit der Arduino IDE („No OTA“) oder einer älteren Version geflasht wurden, müssen **einmal per USB** neu geflasht werden: Arduino IDE mit *Partition Scheme: Custom* + „Upload LittleFS“, oder `DiGi-Hami-Komplett` + `DiGi-Hami-Animationen` per esptool. Danach geht jedes weitere Update über die Web-Oberfläche.
 
 ## 4. Ersteinrichtung (WLAN)
 
@@ -290,12 +313,13 @@ Einstellbar in `platformio.ini` unter `build_flags` (Details in `src/config.h`):
 
 ## 9. Technische Notizen
 
-- **Speicher (4 MB Flash):** PlatformIO nutzt die Standardpartitionen (2 × 1,25 MB App für OTA-Updates + 1,375 MB LittleFS); die Firmware belegt dort ~1,26 MB. Die Arduino IDE nutzt „No OTA“ (2 MB App + 1,9 MB LittleFS), weil die Firmware mit dem Arduino-Core etwas größer ist (~1,30 MB).
+- **Speicher (4 MB Flash):** eine gemeinsame [`partitions.csv`](partitions.csv) für PlatformIO und Arduino IDE (*Custom*): 2 × 1,375 MB Firmware (OTA-Updates) + 1,19 MB LittleFS ab `0x2D0000`. Die Firmware belegt ~1,27 MB (PlatformIO) bzw. ~1,31 MB (Arduino IDE).
+- **Versionskennung:** Jede Firmware enthält den Text `DIGIHAMI_FW:<Version>;`. Daran erkennt die Web-Oberfläche vor dem Update, ob die Datei passt und welche Version sie enthält.
 - **Gleicher Code für beide:** `tools/make_arduino.py` erzeugt den Arduino-Sketch aus `src/`.
 - **Wiedergabe:** AnimatedGIF im „cooked“-Modus mit 8-Bit-Framepuffer. Die fertigen Zeilen werden zu 16-Zeilen-Streifen gesammelt und per **DMA** zum Display geschoben (Doppelpuffer). Teil-Frames, Transparenz und Disposal werden korrekt behandelt.
 - **AnimatedGIF-Fehler umgangen:** In Version 2.2.0 liefert der RGB565-„cooked“-Pfad an transparenten Stellen ungültige Pixel. Die Firmware liest die Zeilen deshalb selbst aus dem Framepuffer. GIFs mit **eigener Farbpalette pro Frame** (häufig bei aus Videos erzeugten GIFs) laufen automatisch über einen zweiten Zeichenpfad, der nur deckende Pixel direkt aufs Display schreibt. Beide Pfade wurden gegen eine Referenz-Dekodierung Frame für Frame pixelgenau getestet.
 - **Web-Oberfläche:** eine einzige HTML-Datei (`web/index.html`), die beim Build gzip-komprimiert (~15 KB) in die Firmware eingebettet wird. Sie funktioniert komplett offline, auch im Einrichtungs-Hotspot. GIF-Umrechnung und LZW-Kodierung laufen im Browser.
-- **Automatischer Build:** Bei jedem Push baut eine GitHub Action ([`.github/workflows/build.yml`](.github/workflows/build.yml)) die PlatformIO-Firmware und den Arduino-Sketch. Bei einem Versions-Tag (`v2.0.1` …) hängt sie Firmware und Dateisystem-Image automatisch als Release an.
+- **Automatischer Build:** Bei jedem Push baut eine GitHub Action ([`.github/workflows/build.yml`](.github/workflows/build.yml)) die PlatformIO-Firmware und den Arduino-Sketch. Erhöht ein Push auf `main` die Version in `src/config.h` (`HAMI_VERSION`), veröffentlicht sie automatisch das Release `v<Version>` mit den Dateien aus `binaries/`, dem Arduino-Sketch und den Release-Notizen aus `CHANGELOG.md`.
 - **REST-API** (für eigene Skripte oder Home Assistant): `GET /api/status`, `GET /api/files`, `GET|POST /api/settings`, `POST /api/play?name=…`, `POST /api/next`, `POST /api/delete?name=…`, `POST /api/upload` (multipart), `POST /api/update` (Firmware), `POST /api/identify`, `POST /api/reboot`, `POST /api/password`. Ist ein Passwort gesetzt, brauchen alle Aufrufe HTTP-Basic-Auth, z. B. `curl -u admin:PASSWORT http://digihami.local/api/status`.
 
 ---

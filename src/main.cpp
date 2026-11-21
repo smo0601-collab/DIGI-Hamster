@@ -19,6 +19,10 @@
 
 LGFX tft;
 
+// Kennung im Firmware-Image: Die Web-Oberflaeche sucht beim Update nach diesem
+// Text, um DiGi-Hami-Firmware und ihre Version zu erkennen.
+extern "C" __attribute__((used)) const char HAMI_FW_TAG[] = "DIGIHAMI_FW:" HAMI_VERSION ";";
+
 // ---------------------------------------------------------------------------
 //  BOOT-Taste
 // ---------------------------------------------------------------------------
@@ -60,7 +64,7 @@ static void buttonLoop() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.printf("\n\n=== DiGi Hami v%s ===\n", HAMI_VERSION);
+  Serial.printf("\n\n=== DiGi Hami v%s ===  (%s)\n", HAMI_VERSION, HAMI_FW_TAG);
 
   pinMode(BTN_PIN, INPUT_PULLUP);
 

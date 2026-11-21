@@ -1,0 +1,10 @@
+# DiGi Hami v2 - Partitionstabelle fuer 4 MB Flash (ESP32-C3 Super Mini)
+# Gilt fuer PlatformIO und Arduino IDE (Partition Scheme "Custom").
+#  - 2 x 1,375 MB Firmware -> Updates ueber die Web-Oberflaeche (OTA)
+#  - 1,19 MB LittleFS fuer die Animationen
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xe000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x160000,
+app1,     app,  ota_1,   0x170000, 0x160000,
+spiffs,   data, spiffs,  0x2D0000, 0x130000,

@@ -349,12 +349,12 @@ footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
 
     <div class="block">
       <h2>Firmware-Update</h2>
-      <p class="mute hide" id="noOta">Dieses Gerät wurde mit einem Partitionsschema ohne OTA geflasht (z. B. „No OTA“ in der Arduino IDE). Neue Firmware bitte per USB aufspielen – deine Animationen bleiben dabei erhalten.</p>
+      <p class="mute hide" id="noOta">Dieses Gerät wurde noch mit einem Speicherlayout ohne Update-Platz geflasht (z. B. „No OTA“ in der Arduino IDE). Spiel einmalig per USB die aktuelle Version mit Partition Scheme „Custom“ auf – danach gehen Updates direkt hier.</p>
       <div id="otaBox">
-      <p class="mute">Wähle die Firmware-Datei: bei PlatformIO <code>firmware.bin</code> aus <code>.pio/build/esp32-c3-supermini/</code>, bei der Arduino IDE <code>DiGi_Hami.ino.bin</code> (Sketch → Kompilierte Binärdatei exportieren). Deine Animationen bleiben erhalten.</p>
+      <p class="mute">Installiert ist <b id="fwCur">–</b>. Neue Versionen findest du unter <a href="https://github.com/smo0601-collab/DIGI-Hamster/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>: lade dort die Datei <code>DiGi-Hami-Update-v….bin</code> herunter und wähle sie hier aus. Einstellungen, WLAN und Animationen bleiben erhalten.</p>
       <div class="row" style="margin-top:12px">
         <input type="file" id="fw" accept=".bin" hidden>
-        <button class="btn" id="fwBtn">Firmware auswählen</button>
+        <button class="btn primary" id="fwBtn">Update-Datei auswählen</button>
         <span class="mute small" id="fwText"></span>
       </div>
       <div class="meter hide" id="fwMeter"><i id="fwBar"></i></div>
@@ -428,6 +428,9 @@ async function loadStatus(){
   else $("#clock").textContent=ST.mode==="sta"?"Uhrzeit wird geholt …":"Ohne WLAN-Verbindung kennt der Hamster die Uhrzeit nicht – Nachtruhe braucht Internet.";
   $("#authState").textContent=ST.auth?"Geschützt: Beim Öffnen fragt der Browser nach Benutzer „admin“ und Passwort.":"Kein Passwort gesetzt – jeder in deinem WLAN kann die Einstellungen ändern. Benutzer ist „admin“, das Passwort legst du hier fest.";
   $("#clearPw").classList.toggle("hide",!ST.auth);
+  $("#fwCur").textContent="v"+ST.version;
+  try{const u=sessionStorage.hamiUpdate;if(u){delete sessionStorage.hamiUpdate;
+    toast(u===ST.version||u==="?"?"Update installiert – läuft jetzt mit v"+ST.version:"Neustart fertig, aber es läuft noch v"+ST.version,u!==ST.version&&u!=="?")}}catch(e){}
   const ota=ST.sketchFree>=ST.sketch;$("#otaBox").classList.toggle("hide",!ota);$("#noOta").classList.toggle("hide",ota);
   if($("#t-sys").classList.contains("show"))renderInfo();
   renderWifiState();
@@ -745,15 +748,38 @@ $("#clearPw").onclick=async()=>{if(!confirm("Passwortschutz entfernen? Danach ka
 
 /* ---------------- OTA ---------------- */
 $("#fwBtn").onclick=()=>$("#fw").click();
-$("#fw").onchange=()=>{const f=$("#fw").files[0];if(!f)return;
-  if(!confirm(`Firmware „${f.name}“ (${kb(f.size)}) installieren?`)){$("#fw").value="";return}
+// Update-Datei pruefen: ESP32-C3-Firmware? Komplett-Datei verwechselt? Welche Version?
+let pendingVer=null;
+function checkFirmware(b){
+  if(b.length<0x9000||b[0]!==0xE9)return{err:"Das ist keine Firmware-Datei (.bin für den ESP32)."};
+  if(b[0x8000]===0xAA&&b[0x8001]===0x50)return{err:"Das ist die Komplett-Datei für USB. Für das Update hier bitte „DiGi-Hami-Update-v….bin“ nehmen."};
+  const chip=b[12]|b[13]<<8;
+  if(chip!==5)return{err:"Die Firmware ist nicht für den ESP32-C3 gebaut (Chip-ID "+chip+")."};
+  const tag=[..."DIGIHAMI_FW:"].map(c=>c.charCodeAt(0));
+  outer:for(let i=0;i<b.length-tag.length-16;i++){
+    for(let k=0;k<tag.length;k++)if(b[i+k]!==tag[k])continue outer;
+    let v="";for(let k=i+tag.length;k<i+tag.length+16&&b[k]!==59&&b[k];k++)v+=String.fromCharCode(b[k]);
+    return{version:v};
+  }
+  return{version:null};
+}
+$("#fw").onchange=async()=>{const f=$("#fw").files[0];$("#fw").value="";if(!f)return;
+  const info=checkFirmware(new Uint8Array(await f.arrayBuffer()));
+  if(info.err){$("#fwText").textContent=info.err;return toast(info.err,1)}
+  if(ST.sketchFree&&f.size>ST.sketchFree){const m=`Datei zu groß (${kb(f.size)}, Platz: ${kb(ST.sketchFree)})`;$("#fwText").textContent=m;return toast(m,1)}
+  const q=info.version?`DiGi Hami v${info.version} installieren?\n(Installiert: v${ST.version})`+(info.version===ST.version?"\n\nDas ist dieselbe Version.":""):
+    `In „${f.name}“ wurde keine DiGi-Hami-Kennung gefunden. Trotzdem installieren?`;
+  if(!confirm(q))return;
+  pendingVer=info.version||"?";
   const fd=new FormData();fd.append("firmware",f,f.name);const x=new XMLHttpRequest();
-  $("#fwMeter").classList.remove("hide");$("#fwText").textContent="lade hoch …";
-  x.open("POST","/api/update");x.upload.onprogress=e=>{if(e.lengthComputable){const p=e.loaded/e.total*100;$("#fwBar").style.width=p+"%";$("#fwText").textContent=Math.round(p)+" %"}};
+  $("#fwMeter").classList.remove("hide");$("#fwText").textContent="lade hoch …";$("#fwBtn").disabled=true;
+  x.open("POST","/api/update");x.upload.onprogress=e=>{if(e.lengthComputable){const p=e.loaded/e.total*100;$("#fwBar").style.width=p+"%";$("#fwText").textContent="lade hoch … "+Math.round(p)+" %"}};
   x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(e){}
-    if(x.status===200&&j.ok){$("#fwText").textContent="Installiert. Neustart …";waitReboot()}else{$("#fwText").textContent=j.error||"Fehlgeschlagen";toast(j.error||"Update fehlgeschlagen",1)}};
-  x.onerror=()=>{$("#fwText").textContent="Verbindung abgebrochen";};x.send(fd);$("#fw").value=""};
-async function waitReboot(){await new Promise(r=>setTimeout(r,4000));for(let i=0;i<40;i++){try{await api("/api/status");location.reload();return}catch(e){await new Promise(r=>setTimeout(r,1500))}}}
+    if(x.status===200&&j.ok){$("#fwText").textContent="Installiert. Der Hamster startet neu …";waitReboot()}
+    else{$("#fwBtn").disabled=false;const m=x.status===401?"Anmeldung erforderlich":(j.error||"Update fehlgeschlagen");$("#fwText").textContent=m;toast(m,1)}};
+  x.onerror=()=>{$("#fwBtn").disabled=false;$("#fwText").textContent="Verbindung abgebrochen"};x.send(fd)};
+async function waitReboot(){await new Promise(r=>setTimeout(r,4000));for(let i=0;i<40;i++){try{await api("/api/status");
+  if(pendingVer)try{sessionStorage.hamiUpdate=pendingVer}catch(e){}location.reload();return}catch(e){await new Promise(r=>setTimeout(r,1500))}}}
 
 /* ---------------- Geraet ---------------- */
 function renderInfo(){if(!ST.version)return;const up=ST.uptime,d=Math.floor(up/86400),h=Math.floor(up%86400/3600),m=Math.floor(up%3600/60);

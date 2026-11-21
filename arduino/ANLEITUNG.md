@@ -11,10 +11,11 @@ DiGi_Hami/
 ├── net.cpp/.h         WLAN, Web-Server, API
 ├── settings.cpp/.h    Einstellungen speichern
 ├── web_index.h        Web-Oberfläche (fertig eingebettet)
-└── data/gifs/         alle 14 Animationen (~1,35 MB, passt mit „No OTA“)
+├── partitions.csv     Speicheraufteilung (wird mit „Custom“ automatisch benutzt)
+└── data/gifs/         die 13 vorinstallierten Animationen (~1 MB)
 ```
 
-Getestet mit **Arduino-ESP32-Core 3.3.12**. Mit diesem Core kompiliert der Sketch ohne Warnungen: 1,30 MB Programm, 140 KB RAM.
+Getestet mit **Arduino-ESP32-Core 3.3.12**. Mit diesem Core kompiliert der Sketch ohne Warnungen: 1,31 MB Programm, 140 KB RAM.
 
 ---
 
@@ -56,13 +57,15 @@ Getestet mit **Arduino-ESP32-Core 3.3.12**. Mit diesem Core kompiliert der Sketc
 | **Board** | **ESP32C3 Dev Module** |
 | **Port** | der Port des Boards (z. B. `COM5` bzw. `/dev/ttyACM0`) |
 | **USB CDC On Boot** | **Enabled** ← wichtig, sonst kein Serial-Monitor |
-| **Partition Scheme** | **No OTA (2MB APP/2MB SPIFFS)** ← wichtig |
+| **Partition Scheme** | **Custom** ← wichtig |
 | CPU Frequency | 160MHz (WiFi) |
 | Flash Size | 4MB |
 | Flash Mode | QIO (bei Startproblemen: DIO) |
 | Upload Speed | 921600 |
 
-> **Warum „No OTA“?** Mit dem Arduino-Core ist die Firmware ~1,3 MB groß und passt nur sehr knapp in das Standardschema (1,25 MB). „No OTA“ gibt der Firmware 2 MB und den Animationen ~1,9 MB, also Platz für viele eigene GIFs und Videos. Einziger Unterschied: Firmware-Updates gehen nicht über WLAN, sondern wie gewohnt per USB. Die Web-Oberfläche erkennt das und blendet den Update-Bereich aus.
+> **Warum „Custom“?** Damit nimmt die Arduino IDE die Datei `partitions.csv` aus dem Sketch-Ordner: zwei Firmware-Plätze à 1,375 MB (für Updates über die Web-Oberfläche) und 1,19 MB für Animationen. Auch das LittleFS-Plugin richtet sich automatisch danach. Mit den Standardschemata passt die Firmware (~1,31 MB) nicht oder es gibt keine Updates über WLAN.
+>
+> **Vorher mit „No OTA“ geflasht?** Dann einmal mit „Custom“ hochladen **und** danach „Upload LittleFS“ ausführen; das Dateisystem liegt jetzt an einer anderen Stelle. Selbst hochgeladene GIFs vorher sichern.
 
 ---
 
@@ -101,6 +104,12 @@ Serial-Monitor auf **115200 Baud** zeigt z. B.:
 
 ---
 
+## Spätere Updates
+
+Ab jetzt brauchst du die Arduino IDE für Updates nicht mehr: Lade unter GitHub → *Releases* die Datei `DiGi-Hami-Update-v….bin` herunter und spiel sie in der Web-Oberfläche unter *System → Firmware-Update* ein.
+
+Eigene Änderungen am Sketch kannst du genauso einspielen: *Sketch → Kompilierte Binärdatei exportieren* erzeugt `DiGi_Hami.ino.bin` im Sketch-Ordner, die wählst du in der Web-Oberfläche aus.
+
 ## Einstellungen ändern
 
 Statt Build-Flags (wie bei PlatformIO) änderst du in der Arduino IDE direkt **`config.h`**:
@@ -120,7 +129,8 @@ Statt Build-Flags (wie bei PlatformIO) änderst du in der Arduino IDE direkt **`
 |---|---|
 | `LovyanGFX.hpp: No such file or directory` | Bibliothek LovyanGFX fehlt → Schritt 1.3 |
 | `'class WiFiClass' has no member …` / `NetworkClient` unbekannt | ESP32-Core 2.x installiert → auf **3.x** aktualisieren |
-| `Sketch too big` | Partition Scheme auf **No OTA (2MB APP/2MB SPIFFS)** stellen |
+| `Sketch too big` | Partition Scheme auf **Custom** stellen (nutzt `partitions.csv` aus dem Sketch-Ordner) |
+| Update-Bereich in der Web-Oberfläche fehlt | Gerät wurde mit „No OTA“ geflasht → einmal mit **Custom** hochladen + „Upload LittleFS“ |
 | `error: 'GIF_DRAW_COOKED' was not declared` | AnimatedGIF zu alt → aktualisieren |
 | Animation ruckelt | Unter *System → Gerät* stehen Bildrate und ms/Frame. Liegen die ms/Frame über der GIF-Framedauer (~50 ms), ist der Dekoder am Limit: `TFT_SPI_HZ` auf 80 MHz (kurze Kabel), oder im Tab *Wiedergabe* das Tempo senken |
 | Web-Oberfläche lädt langsam | Beim ersten Aufruf lädt der Browser die Vorschaubilder einmalig, danach kommen sie aus dem Cache. Bei schwachem Signal unter *System → WLAN → Sendeleistung* eine höhere Stufe wählen |

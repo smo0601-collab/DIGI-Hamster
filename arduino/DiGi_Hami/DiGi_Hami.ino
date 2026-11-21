@@ -5,7 +5,7 @@
 //  Werkzeuge-Menue:
 //    Board ............... ESP32C3 Dev Module
 //    USB CDC On Boot ..... Enabled
-//    Partition Scheme .... No OTA (2MB APP/2MB SPIFFS)
+//    Partition Scheme .... Custom  (nutzt partitions.csv aus diesem Ordner)
 //  Bibliotheken (Bibliotheksverwalter):
 //    LovyanGFX, AnimatedGIF, ArduinoJson
 //  Einstellungen (Pins, Helligkeit, SPI-Takt ...): config.h
@@ -30,6 +30,10 @@
 #include "settings.h"
 
 LGFX tft;
+
+// Kennung im Firmware-Image: Die Web-Oberflaeche sucht beim Update nach diesem
+// Text, um DiGi-Hami-Firmware und ihre Version zu erkennen.
+extern "C" __attribute__((used)) const char HAMI_FW_TAG[] = "DIGIHAMI_FW:" HAMI_VERSION ";";
 
 // ---------------------------------------------------------------------------
 //  BOOT-Taste
@@ -72,7 +76,7 @@ static void buttonLoop() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.printf("\n\n=== DiGi Hami v%s ===\n", HAMI_VERSION);
+  Serial.printf("\n\n=== DiGi Hami v%s ===  (%s)\n", HAMI_VERSION, HAMI_FW_TAG);
 
   pinMode(BTN_PIN, INPUT_PULLUP);
 

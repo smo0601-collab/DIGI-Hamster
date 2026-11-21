@@ -1,13 +1,14 @@
-# DiGi Hami v2 - automatischer Build
+# DiGi Hami v2 - automatischer Build und Release
 #
-#  * bei jedem Push / Pull Request: PlatformIO-Firmware + Arduino-Sketch bauen
-#  * bei einem Tag "v*" (z. B. v2.0.1): Firmware + Dateisystem als Release anhaengen
+#  * bei jedem Push / Pull Request: PlatformIO-Firmware + Arduino-Sketch bauen (Kontrolle)
+#  * Push auf main mit neuer Version in src/config.h (HAMI_VERSION):
+#    Release "v<Version>" veroeffentlichen mit den Dateien aus binaries/,
+#    dem Arduino-Sketch und den Notizen aus CHANGELOG.md
 name: Build
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -44,19 +45,12 @@ jobs:
         run: |
           B=.pio/build/esp32-c3-supermini
           mkdir -p out
-          cp "$B/firmware.bin" "$B/firmware.factory.bin" "$B/littlefs.bin" binaries/LIESMICH.txt out/
+          cp "$B/firmware.bin" "$B/firmware.factory.bin" "$B/littlefs.bin" out/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: digihami-firmware
+          name: digihami-firmware-ci
           path: out/
-
-      - name: Release erstellen
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/*
-          generate_release_notes: true
 
   arduino:
     name: Arduino IDE (Sketch kompilieren)
@@ -74,9 +68,63 @@ jobs:
           arduino-cli core install esp32:esp32
           arduino-cli lib install LovyanGFX AnimatedGIF ArduinoJson
 
-      - name: Sketch kompilieren (ESP32C3 Dev Module, USB CDC an, No OTA)
+      - name: Sketch kompilieren (ESP32C3 Dev Module, USB CDC an, Partition Scheme Custom)
         run: >
           arduino-cli compile
-          --fqbn "esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=no_ota"
+          --fqbn "esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=custom"
           --warnings default
           arduino/DiGi_Hami
+
+  release:
+    name: Release veröffentlichen (bei neuer Version)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version lesen
+        id: v
+        run: |
+          V=$(sed -n 's/^#define HAMI_VERSION "\(.*\)"/\1/p' src/config.h)
+          echo "Version: $V"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Gibt es das Release schon?
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "Release v${{ steps.v.outputs.version }} existiert bereits - nichts zu tun."
+            echo "yes=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "yes=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dateien zusammenstellen
+        if: steps.exists.outputs.yes == '0'
+        run: |
+          V=${{ steps.v.outputs.version }}
+          # Sicherheitscheck: die mitgelieferte Firmware muss genau diese Version sein
+          grep -aq "DIGIHAMI_FW:$V;" binaries/firmware.bin || { echo "::error::binaries/firmware.bin ist nicht Version $V"; exit 1; }
+          mkdir -p out
+          cp binaries/firmware.bin         "out/DiGi-Hami-Update-v$V.bin"
+          cp binaries/firmware.factory.bin "out/DiGi-Hami-Komplett-v$V.bin"
+          cp binaries/littlefs.bin         "out/DiGi-Hami-Animationen-v$V.bin"
+          cp binaries/LIESMICH.txt         out/LIESMICH.txt
+          (cd arduino && zip -qr "../out/DiGi-Hami-Arduino-Sketch-v$V.zip" DiGi_Hami ANLEITUNG.md)
+          # Notizen: Abschnitt dieser Version aus CHANGELOG.md + Installationshinweise
+          awk -v v="## v$V" '$0==v{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md > notes.md
+          cat .github/release-hinweise.md >> notes.md
+          ls -l out
+
+      - name: Release veröffentlichen
+        if: steps.exists.outputs.yes == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=${{ steps.v.outputs.version }}
+          gh release create "v$V" out/* \
+            --title "DiGi Hami v$V" \
+            --notes-file notes.md \
+            --target "${{ github.sha }}"

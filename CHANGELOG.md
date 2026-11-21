@@ -1,5 +1,15 @@
 # Änderungen
 
+## v2.2.0
+
+**Neu**
+- Firmware-Updates über die Web-Oberfläche auch für die Arduino-IDE-Variante: gemeinsame `partitions.csv` mit zwei Firmware-Plätzen (Arduino IDE: *Partition Scheme „Custom“*)
+- Die Web-Oberfläche prüft die Update-Datei vor dem Hochladen: erkennt DiGi-Hami-Firmware und ihre Version, lehnt Komplett-Datei, Animationen-Image und Firmware für andere Chips ab
+- Releases auf GitHub mit `DiGi-Hami-Update-v….bin`, Komplett-Firmware, Animationen-Image und Arduino-Sketch; werden automatisch veröffentlicht, wenn die Version steigt
+- 13 Animationen vorinstalliert (inkl. Putzen, Gähnen, Kaffee, Training, Halloween, Weihnachten); der Überschlag liegt in `extras/`
+
+**Wichtig:** Geräte mit älterem Speicherlayout (Arduino „No OTA“ oder v2.0/v2.1 per PlatformIO) einmal per USB neu flashen, inkl. Dateisystem. Danach gehen Updates über WLAN.
+
 ## v2.1.0
 
 **Neu**

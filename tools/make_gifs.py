@@ -771,7 +771,7 @@ SCENES = {
     "choc":   lambda: scene_run(FUR_CHOC, WHEEL_BERRY, "../../extras/schoko_rennt.gif"),  # Extra
     "snack":  lambda: scene_snack(FUR_GOLD, WHEEL_AMBER, "hami_snack.gif"),
     "sleep":  lambda: scene_sleep(FUR_GOLD, "hami_schlaeft.gif"),
-    "loop":   lambda: scene_loop(FUR_GOLD, WHEEL_AMBER, "hami_ueberschlag.gif"),
+    "loop":   lambda: scene_loop(FUR_GOLD, WHEEL_AMBER, "../../extras/hami_ueberschlag.gif"),
     "hello":  lambda: scene_wave(FUR_GOLD, WHEEL_AMBER, "hami_hallo.gif"),
 }
 
