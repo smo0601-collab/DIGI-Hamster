@@ -22,6 +22,9 @@ void playerResume();                   // nach Suspend weiter
 void playerApplyDisplay();             // Rotation/Helligkeit neu setzen
 void playerSetNight(bool active);      // Nachtruhe an/aus
 bool playerNightActive();
+void playerShowClock();                // Uhr jetzt anzeigen
+void playerApplyClockMode();           // nach Aenderung von cfg.clockMode
+bool playerClockActive();
 void playerShowMessage(const String& title, const String& l1, const String& l2,
                        uint32_t ms, const String& qr = "");
 String playerCurrent();

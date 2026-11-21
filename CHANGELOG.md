@@ -1,5 +1,15 @@
 # Änderungen
 
+## v2.3.0
+
+**Neu**
+- **Uhr mit Datum:** große Uhrzeit, Wochentag und Datum im Hamsterrad, die Sekunden füllen die Sprossen, unten läuft Hami
+- Uhr-Modus in der Web-Oberfläche (*Wiedergabe → Uhr*): **Aus**, **Im Wechsel** mit den Animationen (Standard, 60 s) oder **Immer**
+- Knopf **Uhr zeigen** in der Web-Oberfläche, Vorschau zeigt die Uhr mit an
+- neuer API-Aufruf `POST /api/clock`
+
+Update über die Web-Oberfläche mit `DiGi-Hami-Update-v2.3.0.bin` (ab v2.2.0 mit „Custom“-Partitionen).
+
 ## v2.2.0
 
 **Neu**

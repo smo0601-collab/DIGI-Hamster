@@ -6,6 +6,7 @@
 
 enum PlayMode : uint8_t { MODE_SINGLE = 0, MODE_SEQUENCE = 1, MODE_SHUFFLE = 2 };
 enum NightAction : uint8_t { NIGHT_OFF = 0, NIGHT_DIM = 1, NIGHT_GIF = 2 };
+enum ClockMode : uint8_t { CLOCK_OFF = 0, CLOCK_ROTATE = 1, CLOCK_ALWAYS = 2 };
 
 struct Settings {
   // Allgemein
@@ -19,6 +20,9 @@ struct Settings {
   uint16_t interval = 3;               // Minuten pro Animation (Playlist)
   String current = "hami_rennt.gif";   // aktuelle / feste Animation
   std::vector<String> skip;            // NICHT in der Playlist
+  // Uhr
+  uint8_t clockMode = CLOCK_ROTATE;    // ClockMode: aus / im Wechsel / immer
+  uint16_t clockSecs = 60;             // Anzeigedauer der Uhr bzw. einer Animation im Uhr-Modus
   // Nachtruhe
   bool nightEnabled = false;
   uint16_t nightStart = 22 * 60;       // Minuten seit Mitternacht

@@ -4,7 +4,7 @@
 // ============================================================================
 #pragma once
 
-#define HAMI_VERSION "2.2.0"
+#define HAMI_VERSION "2.3.0"
 
 // ---------------------------------------------------------------------------
 //  Display-Pins (identisch zu v1.0 -> bestehende Verkabelung passt)

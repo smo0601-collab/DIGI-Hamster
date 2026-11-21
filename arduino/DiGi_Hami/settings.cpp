@@ -24,6 +24,9 @@ void Settings::toJson(JsonObject o) const {
   o["current"] = current;
   JsonArray a = o["skip"].to<JsonArray>();
   for (auto& s : skip) a.add(s);
+  JsonObject c = o["clock"].to<JsonObject>();
+  c["mode"] = clockMode;
+  c["secs"] = clockSecs;
   JsonObject n = o["night"].to<JsonObject>();
   n["enabled"] = nightEnabled;
   n["start"] = nightStart;
@@ -85,6 +88,11 @@ bool Settings::fromJson(JsonVariantConst o) {
     for (JsonVariantConst v : o["skip"].as<JsonArrayConst>())
       if (v.is<const char*>() && ns.size() < 64) ns.push_back(v.as<const char*>());
     if (ns != skip) { skip = ns; ch = true; }
+  }
+  JsonVariantConst c = o["clock"];
+  if (!c.isNull()) {
+    ch |= setIf<uint8_t>(c["mode"], clockMode, 0, 2);
+    ch |= setIf<uint16_t>(c["secs"], clockSecs, 10, 3600);
   }
   JsonVariantConst n = o["night"];
   if (!n.isNull()) {

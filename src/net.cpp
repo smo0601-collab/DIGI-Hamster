@@ -223,6 +223,7 @@ static void hStatus() {
   d["decodeMs"] = playerLastDecodeMs();
   d["turbo"] = playerTurbo();
   d["night"] = playerNightActive();
+  d["clock"] = playerClockActive();
   d["mode"] = state == NET_STA ? "sta" : (state == NET_AP ? "ap" : "connecting");
   d["ap"] = apActive;
   d["apName"] = apName;
@@ -299,6 +300,7 @@ static void hPostSettings() {
     playerSetNight(false);
     netEvaluateNight();
   }
+  if (before.clockMode != cfg.clockMode || before.clockSecs != cfg.clockSecs) playerApplyClockMode();
   if (display) {
     playerApplyDisplay();
     // kompletten Frame neu zeichnen (sonst bleiben unveraenderte Bereiche schwarz)
@@ -330,6 +332,11 @@ static void hDelete() {
     playerResume();
   }
   sendOk("geloescht");
+}
+
+static void hClock() {
+  playerShowClock();
+  sendOk();
 }
 
 static void hIdentify() {
@@ -577,6 +584,7 @@ static void setupRoutes() {
   server.on("/api/next", HTTP_POST, guarded(hNext));
   server.on("/api/delete", HTTP_POST, guarded(hDelete));
   server.on("/api/identify", HTTP_POST, guarded(hIdentify));
+  server.on("/api/clock", HTTP_POST, guarded(hClock));
   server.on("/api/reboot", HTTP_POST, guarded(hReboot));
   server.on("/api/factory", HTTP_POST, guarded(hFactory));
   server.on("/api/scan", HTTP_GET, guarded(hScan));

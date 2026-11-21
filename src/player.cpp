@@ -5,6 +5,7 @@
 #include "config.h"
 #include "display.h"
 #include "settings.h"
+#include "clockface.h"
 
 // ---------------------------------------------------------------------------
 //  Eigener FreeRTOS-Task fuer die Animation
@@ -50,6 +51,10 @@ static uint32_t nextFrameAt = 0;
 static uint32_t shownSince = 0;     // seit wann laeuft die aktuelle Animation
 static bool nightActive = false;
 static bool nightOverride = false;  // Nutzer hat nachts manuell etwas gestartet
+// Uhr
+static bool clockActive = false;
+static uint32_t clockUntil = 0;     // 0 = unbegrenzt (Uhr-Modus "immer")
+static uint32_t returnClockAt = 0;  // Uhr-Modus "immer": Animation nur bis hierher
 static bool displayAsleep = false;
 static uint32_t holdUntil = 0;      // Meldung auf dem Display bis ...
 static bool holding = false;
@@ -273,6 +278,26 @@ static void closeGif() {
     gif.close();
     isOpen = false;
   }
+  if (clockActive) {
+    clockFaceStop(gif);
+    clockActive = false;
+  }
+}
+
+// Uhr anzeigen (durationMs = 0: unbegrenzt). Nutzt den GIF-Framepuffer als Zeichenflaeche.
+static bool enterClock(uint32_t durationMs) {
+  closeGif();
+  if (!clockFaceStart(gif, frameBuf, sizeof(frameBuf), dimScale)) {
+    Serial.println("[Uhr] Start fehlgeschlagen");
+    return false;
+  }
+  clockActive = true;
+  clockUntil = durationMs ? millis() + durationMs : 0;
+  if (clockUntil == 0 && durationMs) clockUntil = 1;
+  curName = "";
+  nextFrameAt = millis();
+  Serial.printf("[Uhr] an (%s)\n", durationMs ? "im Wechsel" : "dauerhaft");
+  return true;
 }
 
 static void drawCentered(const String& s, int y, const lgfx::IFont* f, uint16_t col) {
@@ -362,6 +387,8 @@ static void startSomething() {
     if (cfg.nightAction == NIGHT_OFF) return;
     if (cfg.nightAction == NIGHT_GIF && openGif(cfg.nightGif)) return;
   }
+  // Uhr-Modus "immer"
+  if (cfg.clockMode == CLOCK_ALWAYS && enterClock(0)) return;
   // gewuenschte Datei, sonst Playlist
   if (openGif(cfg.current)) return;
   String n = pickNext(cfg.current, false);
@@ -413,12 +440,43 @@ bool playerPlay(const String& name, bool remember) {
     nightActive = false;
     applyBrightness();
   }
+  // Uhr-Modus "immer": Animation nur eine Weile, dann zurueck zur Uhr
+  returnClockAt = cfg.clockMode == CLOCK_ALWAYS ? millis() + (uint32_t)max<int>(cfg.clockSecs, 30) * 1000UL : 0;
   return openGif(name);
 }
 
+void playerShowClock() {
+  PLOCK;
+  holding = false;
+  wakeDisplay();
+  shownSince = millis();
+  enterClock(cfg.clockMode == CLOCK_ALWAYS ? 0 : (uint32_t)cfg.clockSecs * 1000UL);
+}
+
+void playerApplyClockMode() {
+  PLOCK;
+  if (holding || suspended || displayAsleep || nightActive) return;
+  if (cfg.clockMode == CLOCK_ALWAYS && !clockActive) {
+    returnClockAt = 0;
+    enterClock(0);
+  } else if (cfg.clockMode == CLOCK_OFF && clockActive) {
+    closeGif();
+    startSomething();
+  } else if (cfg.clockMode == CLOCK_ROTATE && clockActive && clockUntil == 0) {
+    clockUntil = millis() + (uint32_t)cfg.clockSecs * 1000UL;
+  }
+}
+
+bool playerClockActive() { return clockActive; }
+
 void playerRestart() {
   PLOCK;
-  if (isOpen && curName.length()) openGif(curName);
+  if (isOpen && curName.length()) {
+    openGif(curName);
+  } else if (clockActive) {  // Uhr mit neuer Helligkeit/Drehung neu zeichnen
+    uint32_t rest = clockUntil ? max<int32_t>((int32_t)(clockUntil - millis()), 1000) : 0;
+    enterClock(rest);
+  }
 }
 
 void playerNext() {
@@ -537,6 +595,25 @@ void playerLoop() {
   }
   if (suspended || displayAsleep) return;
 
+  if (clockActive) {
+    if (clockUntil && (int32_t)(now - clockUntil) >= 0) {
+      // Uhr-Zeit im Wechsel vorbei -> naechste Animation
+      shownSince = now;
+      String n = cfg.mode == MODE_SINGLE ? cfg.current : pickNext(cfg.current, cfg.mode == MODE_SHUFFLE);
+      closeGif();
+      if (n.length() && openGif(n)) {
+        cfg.current = n;
+      } else {
+        startSomething();
+      }
+      return;
+    }
+    if ((int32_t)(now - nextFrameAt) < 0) return;
+    uint32_t w = clockFaceStep(gif);
+    nextFrameAt = millis() + w;
+    return;
+  }
+
   if (!isOpen) {
     static uint32_t lastTry = 0;
     if (now - lastTry > 3000) {
@@ -578,11 +655,22 @@ void playerLoop() {
     playerFlushOdometer(false);
   }
 
-  // Ende eines Durchlaufs -> ggf. zur naechsten Animation wechseln
-  if (rc == 0 && !nightActive && cfg.mode != MODE_SINGLE) {
+  // Ende eines Durchlaufs -> ggf. zur Uhr oder naechsten Animation wechseln
+  if (rc == 0 && !nightActive && cfg.clockMode == CLOCK_ALWAYS && returnClockAt &&
+      (int32_t)(now - returnClockAt) >= 0) {
+    returnClockAt = 0;
+    enterClock(0);
+    return;
+  }
+  if (rc == 0 && !nightActive && (cfg.mode != MODE_SINGLE || cfg.clockMode == CLOCK_ROTATE) &&
+      cfg.clockMode != CLOCK_ALWAYS) {
     if (now - shownSince >= (uint32_t)cfg.interval * 60000UL) {
-      String n = pickNext(curName, cfg.mode == MODE_SHUFFLE);
       shownSince = now;
+      if (cfg.clockMode == CLOCK_ROTATE) {
+        enterClock((uint32_t)cfg.clockSecs * 1000UL);
+        return;
+      }
+      String n = pickNext(curName, cfg.mode == MODE_SHUFFLE);
       if (n.length() && n != curName) {
         cfg.current = n;  // nicht speichern (Flash schonen)
         openGif(n);
@@ -597,7 +685,7 @@ static uint32_t playerIdleMs() {
   uint32_t now = millis();
   int32_t w;
   if (holding) w = (int32_t)(holdUntil - now);
-  else if (suspended || displayAsleep || !isOpen) w = 50;
+  else if (suspended || displayAsleep || (!isOpen && !clockActive)) w = 50;
   else w = (int32_t)(nextFrameAt - now);
   if (w < 2) w = 2;  // immer kurz abgeben, damit WLAN/Webserver drankommen
   if (w > 50) w = 50;

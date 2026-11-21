@@ -46,6 +46,10 @@ button,input,select{font:inherit;color:inherit}
   box-shadow:inset 0 0 0 calc(var(--s)*.035) var(--amber),0 10px 40px -12px #000a}
 .wheel .screen{position:absolute;inset:16%;border-radius:50%;overflow:hidden;background:#000}
 .wheel img{width:100%;height:100%;display:block;object-fit:cover}
+.liveclock{position:absolute;inset:0;background:#FCEBCB;color:#4A2C1A;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;padding-bottom:8%}
+.liveclock b{font-size:calc(var(--s) * .2);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.liveclock span{font-size:calc(var(--s) * .062);color:#8A5A2B}
+.liveclock span:first-of-type{font-weight:700;margin-top:4%}
 .wheel .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:.8rem;color:#9aa;padding:12%}
 .paused .wheel::before{animation-play-state:paused}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -159,12 +163,13 @@ footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
   <symbol id="i-next" viewBox="0 0 24 24"><path fill="currentColor" d="M5 6.2v11.6a1 1 0 0 0 1.55.83L15 13v4.5a1 1 0 0 0 2 0v-11a1 1 0 0 0-2 0V11L6.55 5.37A1 1 0 0 0 5 6.2Z"/></symbol>
   <symbol id="i-del" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 6h11M4 12h11M4 18h7M17 16l2 2 4-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
   <symbol id="i-wave" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 11V6.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5.5m0-3a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-.5a7 7 0 0 1-5.6-2.8L3.6 15.4a1.6 1.6 0 0 1 2.4-2.1L7 14.5V11"/></symbol>
 </svg>
 <main>
   <header class="hero" id="hero">
     <div class="wheel" aria-label="Was gerade auf dem Display läuft">
-      <div class="screen"><img id="live" alt=""><div class="empty hide" id="liveEmpty">Display aus</div></div>
+      <div class="screen"><img id="live" alt=""><div class="liveclock hide" id="liveClock" aria-label="Uhr auf dem Display"><b id="lcTime">--:--</b><span id="lcDay"></span><span id="lcDate"></span></div><div class="empty hide" id="liveEmpty">Display aus</div></div>
     </div>
     <div class="who">
       <h1 id="hamName">Hami</h1>
@@ -175,6 +180,7 @@ footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
       </div>
       <div class="row">
         <button class="btn primary" id="btnNext"><svg class="icon"><use href="#i-next"/></svg>Nächste Animation</button>
+        <button class="btn" id="btnClock" title="Uhr jetzt auf dem Display zeigen"><svg class="icon"><use href="#i-clock"/></svg>Uhr zeigen</button>
         <button class="btn" id="btnIdentify" title="Zeigt kurz Name und IP auf dem Display"><svg class="icon"><use href="#i-wave"/></svg>Winken</button>
       </div>
     </div>
@@ -223,6 +229,17 @@ footer{text-align:center;color:var(--mute);font-size:.8rem;margin-top:28px}
           <button data-v="0">Nur eine</button><button data-v="1">Der Reihe nach</button><button data-v="2">Zufällig</button>
         </div>
         <span class="hint" id="modeHint"></span>
+      </div>
+      <div class="field">
+        <span class="lbl">Uhr</span>
+        <div class="seg" id="clockMode" role="group" aria-label="Uhr">
+          <button data-v="0">Aus</button><button data-v="1">Im Wechsel</button><button data-v="2">Immer</button>
+        </div>
+        <span class="hint" id="clockHint"></span>
+      </div>
+      <div class="field" id="clockSecsField">
+        <label for="clockSecs" id="clockSecsLbl">Uhr anzeigen für</label>
+        <span><input type="number" id="clockSecs" min="10" max="3600" style="width:90px"> Sek.</span>
       </div>
       <div class="field" id="intervalField">
         <label for="interval">Wechsel alle</label>
@@ -407,6 +424,12 @@ $$('[role=tab]').forEach(b=>b.addEventListener("click",()=>{
 
 /* ---------------- Status ---------------- */
 let liveName=null;
+const WTAG=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],MONAT=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function renderLiveClock(){const lc=$("#liveClock");lc.classList.toggle("hide",!ST.clock);if(!ST.clock)return;
+  const m=/(\d+)\.(\d+)\.(\d+) (\d+):(\d+)/.exec(ST.time||"");
+  if(!m){$("#lcTime").textContent="--:--";$("#lcDay").textContent="Uhrzeit fehlt";$("#lcDate").textContent="";return}
+  const dt=new Date(+m[3],+m[2]-1,+m[1]);
+  $("#lcTime").textContent=m[4]+":"+m[5];$("#lcDay").textContent=WTAG[dt.getDay()];$("#lcDate").textContent=(+m[1])+". "+MONAT[+m[2]-1]+" "+m[3]}
 async function loadStatus(){
   try{ST=await api("/api/status")}catch(e){$("#netDot").className="dot off";$("#netText").textContent="Keine Verbindung zum Hamster";return}
   $("#hamName").textContent=ST.name;document.title=ST.name+" · DiGi Hami";
@@ -418,12 +441,13 @@ async function loadStatus(){
   $("#odoToday").textContent=km(ST.odoToday);$("#odoTotal").textContent=km(ST.odoTotal);
   FS={total:ST.fsTotal,used:ST.fsUsed};renderFs();
   const cur=ST.current||"";
-  if(cur!==liveName){liveName=cur;
+  renderLiveClock();
+  if(cur!==liveName||!cur){liveName=cur;
     if(cur){$("#live").src="/gifs/"+enc(cur)+"?v="+(sizeOf(cur)||"");$("#live").alt="Läuft gerade: "+prettyName(cur);$("#live").classList.remove("hide");$("#liveEmpty").classList.add("hide")}
-    else{$("#live").removeAttribute("src");$("#live").classList.add("hide");$("#liveEmpty").classList.remove("hide");$("#liveEmpty").textContent=ST.night?"Nachtruhe – Display aus":"Keine Animation"}
+    else{$("#live").removeAttribute("src");$("#live").classList.add("hide");$("#liveEmpty").classList.toggle("hide",!!ST.clock);$("#liveEmpty").textContent=ST.night?"Nachtruhe – Display aus":"Keine Animation"}
     $$(".gif").forEach(g=>g.classList.toggle("cur",g.dataset.name===cur));
   }
-  document.body.classList.toggle("paused",!cur);
+  document.body.classList.toggle("paused",!cur&&!ST.clock);
   if(ST.timeValid)$("#clock").textContent="Uhrzeit auf dem Gerät: "+ST.time+(ST.night?" · Nachtruhe aktiv":"");
   else $("#clock").textContent=ST.mode==="sta"?"Uhrzeit wird geholt …":"Ohne WLAN-Verbindung kennt der Hamster die Uhrzeit nicht – Nachtruhe braucht Internet.";
   $("#authState").textContent=ST.auth?"Geschützt: Beim Öffnen fragt der Browser nach Benutzer „admin“ und Passwort.":"Kein Passwort gesetzt – jeder in deinem WLAN kann die Einstellungen ändern. Benutzer ist „admin“, das Passwort legst du hier fest.";
@@ -481,6 +505,7 @@ async function togglePl(f){
   const skip=new Set(S.skip||[]);f.playlist?skip.add(f.name):skip.delete(f.name);
   try{S=await api("/api/settings",{body:{skip:[...skip]}});f.playlist=!f.playlist;renderFiles(liveName)}catch(e){toast(e.message,1)}}
 $("#btnNext").onclick=async()=>{try{await api("/api/next",{post:1});liveName=null;setTimeout(loadStatus,300)}catch(e){toast(e.message,1)}};
+$("#btnClock").onclick=async()=>{try{await api("/api/clock",{post:1});liveName=null;setTimeout(loadStatus,300)}catch(e){toast(e.message,1)}};
 $("#btnIdentify").onclick=async()=>{try{await api("/api/identify",{post:1});toast("Schau aufs Display 👋")}catch(e){toast(e.message,1)}};
 
 /* ---------------- Upload + Umrechnung ---------------- */
@@ -676,13 +701,20 @@ function lzw(out,minSize,data){
 let patchBuf={};
 const save=debounce(async()=>{const body=patchBuf;patchBuf={};
   try{S=await api("/api/settings",{body});renderSettings()}catch(e){toast("Nicht gespeichert: "+e.message,1)}},350);
-function queueSave(p){const n=p.night?Object.assign({},patchBuf.night,p.night):patchBuf.night;
-  patchBuf=Object.assign({},patchBuf,p);if(n)patchBuf.night=n;save()}
+function queueSave(p){const nb=Object.assign({},patchBuf);
+  for(const k in p)nb[k]=(p[k]&&typeof p[k]==="object"&&!Array.isArray(p[k]))?Object.assign({},patchBuf[k],p[k]):p[k];
+  patchBuf=nb;save()}
 function seg(id,val,onPick){const el=$("#"+id);el.querySelectorAll("button").forEach(b=>{b.setAttribute("aria-pressed",String(+b.dataset.v===val));b.onclick=()=>onPick(+b.dataset.v)})}
 function renderSettings(){
   seg("mode",S.mode,v=>{S.mode=v;renderSettings();queueSave({mode:v})});
   $("#modeHint").textContent=["Es läuft immer die zuletzt gewählte Animation.","Die Playlist wird der Reihe nach abgespielt.","Aus der Playlist wird zufällig gewählt."][S.mode];
-  $("#intervalField").classList.toggle("hide",S.mode===0);
+  $("#intervalField").classList.toggle("hide",S.mode===0&&(!S.clock||S.clock.mode!==1));
+  if(S.clock){const cm=S.clock.mode;
+    seg("clockMode",cm,v=>{S.clock.mode=v;renderSettings();queueSave({clock:{mode:v}})});
+    $("#clockHint").textContent=["Keine Uhr – nur Animationen.","Nach jeder Animation (siehe „Wechsel alle“) erscheint die Uhr für die eingestellte Zeit.","Das Display zeigt dauerhaft die Uhr. Eine Animation, die du antippst oder per BOOT-Taste startest, läuft für die eingestellte Zeit."][cm];
+    $("#clockSecsField").classList.toggle("hide",cm===0);
+    $("#clockSecsLbl").textContent=cm===2?"Animation zeigen für":"Uhr anzeigen für";
+    if(document.activeElement!==$("#clockSecs"))$("#clockSecs").value=S.clock.secs}
   if(document.activeElement!==$("#interval"))$("#interval").value=S.interval;
   $("#speed").value=S.speed;$("#speedVal").textContent=S.speed+" %";
   $("#brightness").value=S.brightness;$("#brightnessVal").textContent=S.brightness+" %";
@@ -703,6 +735,7 @@ function fillNightGifs(){const sel=$("#nightGif");if(!S.night)return;sel.innerHT
   for(const f of FILES)sel.add(new Option(prettyName(f.name),f.name));
   if(!FILES.some(f=>f.name===S.night.gif))sel.add(new Option(S.night.gif+" (fehlt)",S.night.gif));sel.value=S.night.gif}
 $("#interval").onchange=e=>queueSave({interval:+e.target.value});
+$("#clockSecs").onchange=e=>queueSave({clock:{secs:+e.target.value}});
 $("#speed").oninput=e=>{$("#speedVal").textContent=e.target.value+" %";queueSave({speed:+e.target.value})};
 $("#brightness").oninput=e=>{$("#brightnessVal").textContent=e.target.value+" %";queueSave({brightness:+e.target.value})};
 $("#nightOn").onchange=e=>queueSave({night:{enabled:e.target.checked}});

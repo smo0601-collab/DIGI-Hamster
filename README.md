@@ -224,11 +224,27 @@ Oben siehst du live, was gerade auf dem Display läuft, dazu den Kilometerzähle
 - Mit der Häkchen-Taste nimmst du eine Animation in die Playlist auf oder heraus. Schlafen und Hallo sind anfangs nicht in der Playlist.
 - Der Speicherbalken zeigt, wie viel Platz noch frei ist.
 
-**Wiedergabe:** *Nur eine*, *Der Reihe nach* oder *Zufällig*. Dazu der Wechsel-Takt in Minuten (gewechselt wird immer am Ende eines Durchlaufs), das Tempo (25–300 %), die Helligkeit und die Drehung (0/90/180/270°, falls das Display schief im Rad sitzt).
+**Wiedergabe:** *Nur eine*, *Der Reihe nach* oder *Zufällig*; Uhr aus, im Wechsel oder immer. Dazu der Wechsel-Takt in Minuten (gewechselt wird immer am Ende eines Durchlaufs), das Tempo (25–300 %), die Helligkeit und die Drehung (0/90/180/270°, falls das Display schief im Rad sitzt).
 
 **Nachtruhe:** Zeitraum (z. B. 22:00 bis 07:00) und was nachts passiert: *Schlafen* (Schlaf-Animation), *Dimmen* oder *Display aus*. Braucht WLAN mit Internet, weil die Uhrzeit per NTP geholt wird. Startest du nachts von Hand eine Animation, hat das Vorrang bis zum Ende der Nachtruhe.
 
 **System:** Name des Hamsters, Netzwerkname (`xyz.local`), WLAN, Zugriffsschutz, Firmware-Update, Neustart, Werkseinstellungen (die GIFs bleiben dabei erhalten) und Geräte-Infos wie RAM, Bildrate und Speicher.
+
+### Uhr mit Datum
+
+![Uhr](images/uhr.png)
+
+Das Hamsterrad kann auch Uhr sein: große Uhrzeit mit blinkendem Doppelpunkt, darunter Wochentag und Datum, unten läuft Hami. Die Sekunden füllen die Sprossen des Rads im Uhrzeigersinn von oben auf – nach einer Minute ist das Rad einmal „voll“.
+
+Unter **Wiedergabe → Uhr** stellst du ein, wann die Uhr erscheint:
+
+| Einstellung | Verhalten |
+|---|---|
+| **Aus** | nur Animationen |
+| **Im Wechsel** (Standard) | Nach jeder Animation (siehe *Wechsel alle*) zeigt das Display die Uhr für die eingestellte Zeit (Standard 60 s), dann geht es mit der nächsten Animation weiter. |
+| **Immer** | Das Display zeigt dauerhaft die Uhr. Tippst du in der Web-Oberfläche eine Animation an oder drückst kurz die BOOT-Taste, läuft eine Animation für die eingestellte Zeit, danach kommt die Uhr zurück. |
+
+Mit **Uhr zeigen** oben in der Web-Oberfläche holst du die Uhr sofort aufs Display. Die Uhrzeit kommt per Internet (NTP); ohne WLAN zeigt die Uhr „--:--“. Nachtruhe hat Vorrang vor der Uhr.
 
 ### Zugriffsschutz (Benutzer „admin“)
 
@@ -314,6 +330,7 @@ Einstellbar in `platformio.ini` unter `build_flags` (Details in `src/config.h`):
 ## 9. Technische Notizen
 
 - **Speicher (4 MB Flash):** eine gemeinsame [`partitions.csv`](partitions.csv) für PlatformIO und Arduino IDE (*Custom*): 2 × 1,375 MB Firmware (OTA-Updates) + 1,19 MB LittleFS ab `0x2D0000`. Die Firmware belegt ~1,27 MB (PlatformIO) bzw. ~1,31 MB (Arduino IDE).
+- **Uhr:** wird live gezeichnet (`src/clockface.cpp`): Zifferblatt direkt aufs Display, Uhrzeit/Datum und der laufende Hamster über zwei Sprites, die sich den GIF-Framepuffer leihen (kein zusätzlicher RAM). Schriften (geglättet, VLW) und die Hamster-Animation sind in die Firmware eingebettet und werden mit `tools/make_clock_assets.py` erzeugt.
 - **Versionskennung:** Jede Firmware enthält den Text `DIGIHAMI_FW:<Version>;`. Daran erkennt die Web-Oberfläche vor dem Update, ob die Datei passt und welche Version sie enthält.
 - **Gleicher Code für beide:** `tools/make_arduino.py` erzeugt den Arduino-Sketch aus `src/`.
 - **Wiedergabe:** AnimatedGIF im „cooked“-Modus mit 8-Bit-Framepuffer. Die fertigen Zeilen werden zu 16-Zeilen-Streifen gesammelt und per **DMA** zum Display geschoben (Doppelpuffer). Teil-Frames, Transparenz und Disposal werden korrekt behandelt.
